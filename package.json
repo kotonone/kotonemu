@@ -1,7 +1,7 @@
 {
   "name": "kotonemu",
   "description": "A Linux Emulator for JavaScript",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,11 +17,15 @@
     "vite": "^5.2.7",
     "vite-tsconfig-paths": "^4.3.2"
   },
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.cjs",
+  "module": "index.js",
+  "types": "index.d.ts",
   "files": [
-    "packages"
+    "packages",
+    "*.js",
+    "*.cjs",
+    "*.d.ts",
+    "*.d.cts"
   ],
   "keywords": [
     "emulator",
