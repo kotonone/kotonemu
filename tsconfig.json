@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ES2022",
+        "moduleResolution": "Bundler",
+        "rootDir": "./",
+        "baseUrl": "./",
+        "strict": true,
+        "noImplicitOverride": true,
+        "paths": {
+            "@/core/*": ["./packages/core/*"],
+            "@/os/*": ["./packages/os/*"]
+        }
+    },
+    "include": ["**/*"]
+}

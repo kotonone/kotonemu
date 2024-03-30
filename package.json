@@ -1,0 +1,30 @@
+{
+  "name": "kotonemu",
+  "description": "A Linux Emulator for JavaScript",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsup --entry.index packages/core/index.ts --entry.os packages/os/index.ts --dts --minify --format cjs,esm",
+    "prepublishOnly": "pnpm run build && node scripts/prepublishOnly.js",
+    "postpublish": "node scripts/postpublish.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@xterm/xterm": "^5.4.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.3",
+    "vite": "^5.2.7",
+    "vite-tsconfig-paths": "^4.3.2"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "packages"
+  ],
+  "keywords": [
+    "emulator",
+    "linux"
+  ]
+}
