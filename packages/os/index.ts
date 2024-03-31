@@ -249,6 +249,15 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                             } else {
                                                 lib.io.write(`-fsh: ${command[0]}: 引数が多すぎます\n`, 2);
                                             }
+                                        } else if (command[0] === "pwd") {
+                                            if (command.length === 1) {
+                                                lib.io.write(this.env.PWD + "\n", 2);
+                                            } else if (command.length >= 2 && command.slice(1).every((e) => e == "-P" || e == "-L" || !e.startsWith("-"))) {
+                                                lib.io.write(this.env.PWD + "\n", 2);
+                                            } else {
+                                                lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
+                                                lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
+                                            }
                                         } else {
                                             let binaryFile: string | null = null;
                                             for (const path of (this.env.PATH ?? "").split(":")) {
