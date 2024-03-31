@@ -3,7 +3,7 @@ import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
 import { StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
-import { basename, join, split } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split } from "@/core/Utils";
 import { Directory } from "@/core/File";
 
 /** ShalfeltOS を生成します。 */
@@ -321,6 +321,96 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 }
                                             });
                                         }
+                                    }
+                                }
+                            },
+                            {
+                                name: "cat",
+                                type: "executable-file",
+                                owner: 0,
+                                group: 0,
+                                mode: 0o777,
+                                deleted: false,
+                                protected: true,
+
+                                async onStart(lib) {
+                                    const args = this.args
+                                    let LogicalOption = true;
+                                    let isError = false
+                                    let notOptionIndex = 0
+                                    catArgs:for(const arg of args){
+                                        if(arg === "--help"){
+                                            lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
+                                            isError = true
+                                            notOptionIndex++;
+                                            break catArgs;
+                                        }else if(arg.startsWith("-")){
+                                            for(const char of arg.slice(1)){
+                                                /** /if(char === "L"){
+                                                    LogicalOption = true
+                                                }else if(char === "P"){
+                                                    LogicalOption = false
+                                                }else/**/{
+                                                    lib.io.write(`cat: 無効なオプション -- ${char}\n`, 2);
+                                                    lib.io.write(`Try 'cat --help' for more information.\n`, 2);
+                                                    isError = true
+                                                    notOptionIndex++;
+                                                    break catArgs;
+                                                }
+                                            }
+                                        }else{
+                                            break catArgs;
+                                        }
+                                    }
+                                    if(!isError){
+                                        const dataArray:ArrayBuffer[] = []
+                                        for(const fileName of args.slice(notOptionIndex)){
+                                            try {
+                                                let binaryFile: string | null = null;
+                                                try {
+                                                    this.stat(binaryFile = fileName);
+                                                } catch (e) {
+                                                    if (e instanceof ENOENT) {
+                                                        binaryFile = null;
+                                                    } else {
+                                                        throw e;
+                                                    }
+                                                }
+                                                if(!binaryFile){
+                                                    for (const path of (this.env.PATH ?? "").split(":")) {
+                                                        try {
+                                                            this.stat(binaryFile = join(path, fileName));
+                                                            break;
+                                                        } catch (e) {
+                                                            if (e instanceof ENOENT) {
+                                                                binaryFile = null;
+                                                            } else {
+                                                                throw e;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (!binaryFile) throw new ENOENT(fileName);
+    
+                                                const stat = this.stat(binaryFile);
+                                                if (stat.mode & StatMode.IFDIR) throw new EISDIR(fileName);
+
+                                                const id = this.open(binaryFile,2)
+                                                dataArray.push(await this.read(id))
+                                                this.close(id)
+                                            } catch (e) {
+                                                if (e instanceof ENOENT) {
+                                                    lib.io.write(`cat: ${fileName} : そのようなファイルやディレクトリはありません\n`, 2);
+                                                } else if (e instanceof EISDIR) {
+                                                    lib.io.write(`cat: ${fileName} : ディレクトリです\n`, 2);
+                                                } else {
+                                                    throw e;
+                                                }
+                                            }
+                                        }
+                                        console.log(new Uint8Array(concatArrayBuffer(...dataArray)))
+                                        lib.io.write(new Uint8Array(concatArrayBuffer(...dataArray)), 2);
+                                        //lib.io.write(`\n`, 2);
                                     }
                                 }
                             }
