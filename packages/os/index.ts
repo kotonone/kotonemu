@@ -252,8 +252,13 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                         } else if (command[0] === "pwd") {
                                             if (command.length === 1) {
                                                 lib.io.write(this.env.PWD + "\n", 2);
+                                                lib.io.write(lib.path.absolute(this.env.PWD) + "\n", 2);
                                             } else if (command.length >= 2 && command.slice(1).every((e) => e == "-P" || e == "-L" || !e.startsWith("-"))) {
-                                                lib.io.write(this.env.PWD + "\n", 2);
+                                                const option = command.slice(0).filter((e) => e == "-P" || e == "-L").at(-1);
+                                                if(option === undefined || option === "-L")
+                                                    lib.io.write(this.env.PWD + "\n", 2);
+                                                else if(option==="-P")
+                                                    lib.io.write(this.env.PWD + "\n", 2);// TODO: -P option
                                             } else {
                                                 lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
                                                 lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
