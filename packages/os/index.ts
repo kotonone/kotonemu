@@ -252,17 +252,36 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                         } else if (command[0] === "pwd") {
                                             if (command.length === 1) {
                                                 lib.io.write(this.env.PWD + "\n", 2);
-                                            } else if (command.length >= 2 && command.slice(1).every((e) => e == "-P" || e == "-L" || !e.startsWith("-"))) {
-                                                const option = command.slice(0).filter((e) => e == "-P" || e == "-L").at(-1);
-                                                if(option === undefined || option === "-L"){
-                                                    lib.io.write(this.env.PWD + "\n", 2);
+                                            } else if (command.length >= 2) {
+                                                const args = command.slice(1)
+                                                let LogicalOption = true;
+                                                let isError = false
+                                                pwdArgs:for(const arg of args){
+                                                    if(arg.startsWith("-")){
+                                                        for(const char of arg.slice(1)){
+                                                            if(char === "L"){
+                                                                LogicalOption = true
+                                                            }else if(char === "P"){
+                                                                LogicalOption = false
+                                                            }else{
+                                                                lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
+                                                                lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
+                                                                isError = true
+                                                                break pwdArgs;
+                                                            }
+                                                        }
+                                                    }
                                                 }
-                                                else if(option === "-P"){
-                                                    lib.io.write(this.env.PWD + "\n", 2); // TODO: -P option
+
+                                                if (!isError){
+                                                    if(LogicalOption){
+                                                        lib.io.write(this.env.PWD + "\n", 2);
+                                                    }
+                                                    else{
+                                                        lib.io.write(this.env.PWD + "\n", 2); // TODO: -P option
+                                                    }
                                                 }
-                                            } else {
-                                                lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
-                                                lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
+
                                             }
                                         } else {
                                             let binaryFile: string | null = null;
