@@ -277,10 +277,10 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
 
                                                 if (!isError){
                                                     if(LogicalOption){
-                                                        lib.io.write(this.env.PWD + "\n", 2);
+                                                        lib.io.write(this.env.PWD + "\n", 1);
                                                     }
                                                     else{
-                                                        lib.io.write(this.env.PWD + "\n", 2); // TODO: -P option
+                                                        lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
                                                     }
                                                 }
 
@@ -408,8 +408,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 }
                                             }
                                         }
-                                        console.log(new Uint8Array(concatArrayBuffer(...dataArray)))
-                                        lib.io.write(new Uint8Array(concatArrayBuffer(...dataArray)), 2);
+                                        lib.io.write(new Uint8Array(concatArrayBuffer(...dataArray)), 1);
                                         //lib.io.write(`\n`, 2);
                                     }
                                 }
