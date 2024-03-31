@@ -270,6 +270,8 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                                 break pwdArgs;
                                                             }
                                                         }
+                                                    }else{
+                                                        break pwdArgs;
                                                     }
                                                 }
 
