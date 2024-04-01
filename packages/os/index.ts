@@ -1,7 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
-import { StdReadFlag } from "@/core/Flags";
+import { OpenFlag, StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
 import { basename, concatArrayBuffer, join, split } from "@/core/Utils";
 import { Directory } from "@/core/File";
@@ -389,7 +389,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 const stat = this.stat(binaryFile);
                                                 if (stat.mode & StatMode.IFDIR) throw new EISDIR(fileName);
 
-                                                const id = this.open(binaryFile,2);
+                                                const id = this.open(binaryFile, OpenFlag.READ);
                                                 dataArray.push(await this.read(id));
                                                 this.close(id);
                                             } catch (e) {
