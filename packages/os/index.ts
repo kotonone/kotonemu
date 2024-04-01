@@ -260,13 +260,13 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                     if(arg.startsWith("-")){
                                                         for(const char of arg.slice(1)){
                                                             if(char === "L"){
-                                                                LogicalOption = true
+                                                                LogicalOption = true;
                                                             }else if(char === "P"){
-                                                                LogicalOption = false
+                                                                LogicalOption = false;
                                                             }else{
                                                                 lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
                                                                 lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
-                                                                isError = true
+                                                                isError = true;
                                                                 break pwdArgs;
                                                             }
                                                         }
@@ -334,36 +334,30 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                 protected: true,
 
                                 async onStart(lib) {
-                                    const args = this.args
-                                    let LogicalOption = true;
+                                    const args = this.args;
                                     let isError = false
                                     let notOptionIndex = 0
                                     catArgs:for(const arg of args){
                                         if(arg === "--help"){
                                             lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
-                                            isError = true
+                                            isError = true;
                                             notOptionIndex++;
                                             break catArgs;
                                         }else if(arg.startsWith("-")){
                                             for(const char of arg.slice(1)){
-                                                /** /if(char === "L"){
-                                                    LogicalOption = true
-                                                }else if(char === "P"){
-                                                    LogicalOption = false
-                                                }else/**/{
-                                                    lib.io.write(`cat: 無効なオプション -- ${char}\n`, 2);
-                                                    lib.io.write(`Try 'cat --help' for more information.\n`, 2);
-                                                    isError = true
-                                                    notOptionIndex++;
-                                                    break catArgs;
-                                                }
+                                                lib.io.write(`cat: 無効なオプション -- ${char}\n`, 2);
+                                                lib.io.write(`Try 'cat --help' for more information.\n`, 2);
+                                                isError = true;
+                                                notOptionIndex++;
+                                                break catArgs;
+                                                
                                             }
                                         }else{
                                             break catArgs;
                                         }
                                     }
                                     if(!isError){
-                                        const dataArray:ArrayBuffer[] = []
+                                        const dataArray:ArrayBuffer[] = [];
                                         for(const fileName of args.slice(notOptionIndex)){
                                             try {
                                                 let binaryFile: string | null = null;
@@ -395,9 +389,9 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 const stat = this.stat(binaryFile);
                                                 if (stat.mode & StatMode.IFDIR) throw new EISDIR(fileName);
 
-                                                const id = this.open(binaryFile,2)
-                                                dataArray.push(await this.read(id))
-                                                this.close(id)
+                                                const id = this.open(binaryFile,2);
+                                                dataArray.push(await this.read(id));
+                                                this.close(id);
                                             } catch (e) {
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`cat: ${fileName} : そのようなファイルやディレクトリはありません\n`, 2);
