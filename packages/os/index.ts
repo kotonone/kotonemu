@@ -256,30 +256,29 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 const args = command.slice(1)
                                                 let LogicalOption = true;
                                                 let isError = false
-                                                pwdArgs:for(const arg of args){
+                                                pwdArgs:for (const arg of args) {
                                                     if(arg.startsWith("-")){
-                                                        for(const char of arg.slice(1)){
-                                                            if(char === "L"){
+                                                        for (const char of arg.slice(1)) {
+                                                            if (char === "L") {
                                                                 LogicalOption = true;
-                                                            }else if(char === "P"){
+                                                            } else if (char === "P") {
                                                                 LogicalOption = false;
-                                                            }else{
+                                                            } else {
                                                                 lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
                                                                 lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
                                                                 isError = true;
                                                                 break pwdArgs;
                                                             }
                                                         }
-                                                    }else{
+                                                    } else{
                                                         break pwdArgs;
                                                     }
                                                 }
 
                                                 if (!isError){
-                                                    if(LogicalOption){
+                                                    if (LogicalOption) {
                                                         lib.io.write(this.env.PWD + "\n", 1);
-                                                    }
-                                                    else{
+                                                    } else {
                                                         lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
                                                     }
                                                 }
@@ -337,14 +336,14 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     const args = this.args;
                                     let isError = false
                                     let notOptionIndex = 0
-                                    catArgs:for(const arg of args){
-                                        if(arg === "--help"){
+                                    catArgs:for (const arg of args) {
+                                        if (arg === "--help") {
                                             lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
                                             isError = true;
                                             notOptionIndex++;
                                             break catArgs;
-                                        }else if(arg.startsWith("-")){
-                                            for(const char of arg.slice(1)){
+                                        } else if(arg.startsWith("-")) {
+                                            for (const char of arg.slice(1)) {
                                                 lib.io.write(`cat: 無効なオプション -- ${char}\n`, 2);
                                                 lib.io.write(`Try 'cat --help' for more information.\n`, 2);
                                                 isError = true;
@@ -352,13 +351,13 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 break catArgs;
                                                 
                                             }
-                                        }else{
+                                        } else {
                                             break catArgs;
                                         }
                                     }
-                                    if(!isError){
-                                        const dataArray:ArrayBuffer[] = [];
-                                        for(const fileName of args.slice(notOptionIndex)){
+                                    if (!isError) {
+                                        const dataArray: ArrayBuffer[] = [];
+                                        for (const fileName of args.slice(notOptionIndex)) {
                                             try {
                                                 let binaryFile: string | null = null;
                                                 try {
@@ -370,7 +369,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                         throw e;
                                                     }
                                                 }
-                                                if(!binaryFile){
+                                                if (!binaryFile) {
                                                     for (const path of (this.env.PATH ?? "").split(":")) {
                                                         try {
                                                             this.stat(binaryFile = join(path, fileName));
