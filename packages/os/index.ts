@@ -356,7 +356,6 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                         }
                                     }
                                     if (!isError) {
-                                        const dataArray: ArrayBuffer[] = [];
                                         for (const fileName of args.slice(notOptionIndex)) {
                                             try {
                                                 let binaryFile: string | null = null;
@@ -389,7 +388,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 if (stat.mode & StatMode.IFDIR) throw new EISDIR(fileName);
 
                                                 const id = this.open(binaryFile, OpenFlag.READ);
-                                                dataArray.push(await this.read(id));
+                                                lib.io.write(new Uint8Array(await this.read(id)), 1);
                                                 this.close(id);
                                             } catch (e) {
                                                 if (e instanceof ENOENT) {
@@ -401,8 +400,6 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 }
                                             }
                                         }
-                                        lib.io.write(new Uint8Array(concatArrayBuffer(...dataArray)), 1);
-                                        //lib.io.write(`\n`, 2);
                                     }
                                 }
                             }
