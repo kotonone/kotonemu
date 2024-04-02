@@ -335,6 +335,8 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     const args = this.args;
                                     let isError = false;
                                     let notOptionIndex = 0;
+                                    
+                                    // TODO: Add options
                                     catArgs: for (const arg of args) {
                                         if (arg === "--help") {
                                             lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
