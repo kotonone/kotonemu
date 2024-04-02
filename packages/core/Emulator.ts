@@ -81,6 +81,6 @@ export class Emulator {
         const emulatorThis = this;
         this.rootProcess.spawn(async function () {
             await this.exec(join(emulatorThis.SYSTEM_BIN_DIRECTORY, "init"));
-        })
+        });
     }
 }

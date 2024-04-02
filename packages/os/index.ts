@@ -399,39 +399,12 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     lib.io.write(`\n${info.os_name} ${info.os_version}\n`);
                                     lib.io.write("Copyright (C) 2024 Kotonone and ShalfeltOS contributors\n\n");
 
-                                    // const fd = this.open("filelink", OpenFlag.READ | OpenFlag.WRITE);
-                                    // this.seek(fd, 3);
-                                    // this.write(fd, new Uint8Array([97, 98, 99]));
-                                    // this.seek(fd, 0);
-                                    // console.log(await this.read(fd))
-                                    // this.close(fd);
-
                                     await this.spawn(async function() {
                                         await this.exec("/bin/login", [], {
                                             PWD: "/",
                                             PATH: "/bin:/sbin"
                                         });
                                     });
-
-                                    // this.write(1, Buffer.from("===== Process Tree =====\n"));
-                                    // const processFlatFunc = (p: Process): string[] => [`${p.name} (${p.id}) [${p.tty}]`, ...p.children.flatMap(processFlatFunc).map(l => "    " + l)];
-                                    // this.write(1, Buffer.from([emu.rootProcess].flatMap(processFlatFunc).join("\n") + "\n"));
-
-                                    // this.write(1, Buffer.from("===== Storage Tree =====\n"));
-                                    // const storageFlatFunc = (f: File): string[] => [`${f.name}`, ...(isDirectory(f) ? f.children.flatMap(storageFlatFunc).map(l => "    " + l) : [])];
-                                    // this.write(1, Buffer.from([emu.storage].flatMap(storageFlatFunc).join("\n") + "\n"));
-
-                                    // const ttyFd = emu.open("/dev/tty1", OpenFlag.READ | OpenFlag.WRITE);
-                                    // while (true) {
-                                    //     const buf = await emu.read(ttyFd);
-                                    //     emu.write(ttyFd, buf);
-                                    // }
-
-                                    // const ttyLinkFd = emu.open("/ttylink", OpenFlag.READ | OpenFlag.WRITE);
-                                    // while (true) {
-                                    //     const buf = await emu.read(ttyLinkFd);
-                                    //     emu.write(ttyLinkFd, buf);
-                                    // }
                                 }
                             }
                         ]
