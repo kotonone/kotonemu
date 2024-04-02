@@ -276,7 +276,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 }
 
                                                 if (!isError){
-                                                    if (LogicalOption) {
+                                                    if (logicalOption) {
                                                         lib.io.write(this.env.PWD + "\n", 1);
                                                     } else {
                                                         lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
