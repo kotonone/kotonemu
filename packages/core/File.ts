@@ -1,6 +1,6 @@
 import { Process } from "./Process";
 
-export interface File {
+export interface IFile {
     name: string;
     owner: number;
     group: number;
@@ -8,12 +8,12 @@ export interface File {
     deleted: boolean;
 }
 
-export interface RegularFile extends File {
+export interface RegularFile extends IFile {
     type: "regular-file";
     data: ArrayBuffer;
 }
 
-export interface ExecutableFile extends File {
+export interface ExecutableFile extends IFile {
     type: "executable-file";
     data?: ArrayBuffer;
     protected: boolean;
@@ -29,39 +29,41 @@ export interface ExecutableFile extends File {
     }): Promise<void>;
 }
 
-export interface DeviceFile extends File {
+export interface DeviceFile extends IFile {
     type: "device";
 
     read(): ArrayBuffer | Promise<ArrayBuffer>;
     write(data: ArrayBuffer): void;
 }
 
-export interface SymbolicLink extends File {
+export interface SymbolicLink extends IFile {
     type: "symlink";
 
     target: string;
 }
 
-export interface Directory extends File {
+export interface Directory extends IFile {
     type: "directory";
-    children: (RegularFile | ExecutableFile | DeviceFile | SymbolicLink | Directory)[];
+    children: File[];
 }
 
-export function getFileType(value: File): string {
+export type File = RegularFile | ExecutableFile | DeviceFile | SymbolicLink | Directory;
+
+export function getFileType(value: IFile): string {
     return "type" in value ? <string>value.type : "unknown";
 }
-export function isRegularFile(value: File): value is RegularFile {
+export function isRegularFile(value: IFile): value is RegularFile {
     return getFileType(value) === "regular-file";
 }
-export function isExecutableFile(value: File): value is ExecutableFile {
+export function isExecutableFile(value: IFile): value is ExecutableFile {
     return getFileType(value) === "executable-file";
 }
-export function isDeviceFile(value: File): value is DeviceFile {
+export function isDeviceFile(value: IFile): value is DeviceFile {
     return getFileType(value) === "device";
 }
-export function isSymbolicLink(value: File): value is SymbolicLink {
+export function isSymbolicLink(value: IFile): value is SymbolicLink {
     return getFileType(value) === "symlink";
 }
-export function isDirectory(value: File): value is Directory {
+export function isDirectory(value: IFile): value is Directory {
     return getFileType(value) === "directory";
 }

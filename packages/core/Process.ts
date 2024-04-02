@@ -1,6 +1,6 @@
 import { Emulator, EmulatorInfo } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD } from "./Error";
-import { File, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile } from "./File";
+import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
 import { OpenFlag, StdReadFlag, UnlinkFlag } from "./Flags";
 import { extractEntryNames, dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR } from "./Utils";
 
@@ -155,7 +155,7 @@ export class Process {
      * @param entry 親エントリ
      * @param name 子エントリ名
      */
-    private _getEntry(entry: Directory, name: string): File | null {
+    private _getEntry(entry: Directory, name: string): IFile | null {
         const e = entry.children.find(e => e.name === name);
         if (e && e.deleted) return null;
         return e ?? null;
@@ -165,8 +165,8 @@ export class Process {
      * @param pathname パス名
      * @param resolveSymlinkAsFile シンボリックリンクが参照された際、リンク先を参照するかどうか
      */
-    private _getEntryFromPathname(pathname: string, resolveSymlinkAsFile: boolean = false): File {
-        let pointer: File = this.emulator.storage;
+    private _getEntryFromPathname(pathname: string, resolveSymlinkAsFile: boolean = false): IFile {
+        let pointer: IFile = this.emulator.storage;
 
         const entryNames = this._resolvePathname(pathname).slice(1);
 
@@ -178,7 +178,7 @@ export class Process {
                 throw new ENOENT(pathname);
             }
 
-            const entry: Directory | File | null = this._getEntry(pointer ?? this.emulator.storage, p);
+            const entry: Directory | IFile | null = this._getEntry(pointer ?? this.emulator.storage, p);
             if (entry === null) {
                 throw new ENOENT(pathname);
             } else {
@@ -197,7 +197,7 @@ export class Process {
      * @param parent 作成するエントリの親エントリ
      * @param entry 作成するエントリオブジェクト
      */
-    private _createEntry<E extends Directory["children"][number]>(parent: Directory | string, entry: E): void {
+    private _createEntry<E extends File>(parent: Directory | string, entry: E): void {
         const parentEntry = typeof parent === "string" ? this._getEntryFromPathname(parent) : parent;
 
         if (entry.name.startsWith(this.emulator.PROCESS_DIRECTORY)) {

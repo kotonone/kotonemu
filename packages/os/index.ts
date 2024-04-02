@@ -4,10 +4,10 @@ import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
 import { OpenFlag, StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
 import { basename, concatArrayBuffer, join, split } from "@/core/Utils";
-import { Directory } from "@/core/File";
+import { File } from "@/core/File";
 
 /** ShalfeltOS を生成します。 */
-export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: Directory["children"] } {
+export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: File[] } {
     return {
         options: {
             info: {
