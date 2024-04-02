@@ -392,9 +392,9 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 this.close(id);
                                             } catch (e) {
                                                 if (e instanceof ENOENT) {
-                                                    lib.io.write(`cat: ${fileName} : そのようなファイルやディレクトリはありません\n`, 2);
+                                                    lib.io.write(`cat: ${fileName}: そのようなファイルやディレクトリはありません\n`, 2);
                                                 } else if (e instanceof EISDIR) {
-                                                    lib.io.write(`cat: ${fileName} : ディレクトリです\n`, 2);
+                                                    lib.io.write(`cat: ${fileName}: ディレクトリです\n`, 2);
                                                 } else {
                                                     throw e;
                                                 }
