@@ -388,7 +388,7 @@ export class Process {
             throw new ENOTDIR(pathname);
         }
 
-        return entry.children.map(c => c.name);
+        return entry.children.filter(c => !c.deleted).map(c => c.name);
     }
     /**
      * ディレクトリを削除します。
