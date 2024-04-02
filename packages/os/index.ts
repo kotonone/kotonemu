@@ -1,9 +1,9 @@
 import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
-import { StdReadFlag } from "@/core/Flags";
+import { OpenFlag, StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
-import { basename, join, split } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split } from "@/core/Utils";
 import { Directory } from "@/core/File";
 
 /** ShalfeltOS を生成します。 */
@@ -249,6 +249,40 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                             } else {
                                                 lib.io.write(`-fsh: ${command[0]}: 引数が多すぎます\n`, 2);
                                             }
+                                        } else if (command[0] === "pwd") {
+                                            if (command.length === 1) {
+                                                lib.io.write(this.env.PWD + "\n", 2);
+                                            } else if (command.length >= 2) {
+                                                let logicalOption = true;
+                                                let isError = false
+                                                pwdArgs: for (const arg of command.slice(1)) {
+                                                    if (arg.startsWith("-")) {
+                                                        for (const char of arg.slice(1)) {
+                                                            if (char === "L") {
+                                                                logicalOption = true;
+                                                            } else if (char === "P") {
+                                                                logicalOption = false;
+                                                            } else {
+                                                                lib.io.write(`-fsh: ${command[0]}: ${command.slice(0).filter((e) => e != "-P" && e != "-L" && e.startsWith("-"))[0]}: 無効なオプションです\n`, 2);
+                                                                lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
+                                                                isError = true;
+                                                                break pwdArgs;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        break pwdArgs;
+                                                    }
+                                                }
+
+                                                if (!isError) {
+                                                    if (logicalOption) {
+                                                        lib.io.write(this.env.PWD + "\n", 1);
+                                                    } else {
+                                                        lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
+                                                    }
+                                                }
+
+                                            }
                                         } else {
                                             let binaryFile: string | null = null;
                                             for (const path of (this.env.PATH ?? "").split(":")) {
@@ -284,6 +318,59 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                     }
                                                 }
                                             });
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                name: "cat",
+                                type: "executable-file",
+                                owner: 0,
+                                group: 0,
+                                mode: 0o777,
+                                deleted: false,
+                                protected: true,
+
+                                async onStart(lib) {
+                                    const args = this.args;
+                                    let isError = false;
+                                    let notOptionIndex = 0;
+                                    
+                                    // TODO: Add options
+                                    catArgs: for (const arg of args) {
+                                        if (arg === "--help") {
+                                            lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
+                                            isError = true;
+                                            notOptionIndex++;
+                                            break catArgs;
+                                        } else if(arg.startsWith("-")) {
+                                            for (const char of arg.slice(1)) {
+                                                lib.io.write(`cat: 無効なオプション -- ${char}\n`, 2);
+                                                lib.io.write(`Try 'cat --help' for more information.\n`, 2);
+                                                isError = true;
+                                                notOptionIndex++;
+                                                break catArgs;
+                                                
+                                            }
+                                        } else {
+                                            break catArgs;
+                                        }
+                                    }
+                                    if (!isError) {
+                                        for (const fileName of args.slice(notOptionIndex)) {
+                                            try {
+                                                const fd = this.open(fileName, OpenFlag.READ);
+                                                lib.io.write(new Uint8Array(await this.read(fd)), 1);
+                                                this.close(fd);
+                                            } catch (e) {
+                                                if (e instanceof ENOENT) {
+                                                    lib.io.write(`cat: ${fileName}: そのようなファイルやディレクトリはありません\n`, 2);
+                                                } else if (e instanceof EISDIR) {
+                                                    lib.io.write(`cat: ${fileName}: ディレクトリです\n`, 2);
+                                                } else {
+                                                    throw e;
+                                                }
+                                            }
                                         }
                                     }
                                 }
