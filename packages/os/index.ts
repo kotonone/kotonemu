@@ -253,10 +253,9 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                             if (command.length === 1) {
                                                 lib.io.write(this.env.PWD + "\n", 2);
                                             } else if (command.length >= 2) {
-                                                const args = command.slice(1)
                                                 let logicalOption = true;
                                                 let isError = false
-                                                pwdArgs: for (const arg of args) {
+                                                pwdArgs: for (const arg of command.slice(1)) {
                                                     if (arg.startsWith("-")) {
                                                         for (const char of arg.slice(1)) {
                                                             if (char === "L") {
