@@ -357,38 +357,9 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     if (!isError) {
                                         for (const fileName of args.slice(notOptionIndex)) {
                                             try {
-                                                let binaryFile: string | null = null;
-                                                try {
-                                                    this.stat(binaryFile = fileName);
-                                                } catch (e) {
-                                                    if (e instanceof ENOENT) {
-                                                        binaryFile = null;
-                                                    } else {
-                                                        throw e;
-                                                    }
-                                                }
-                                                if (!binaryFile) {
-                                                    for (const path of (this.env.PATH ?? "").split(":")) {
-                                                        try {
-                                                            this.stat(binaryFile = join(path, fileName));
-                                                            break;
-                                                        } catch (e) {
-                                                            if (e instanceof ENOENT) {
-                                                                binaryFile = null;
-                                                            } else {
-                                                                throw e;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (!binaryFile) throw new ENOENT(fileName);
-    
-                                                const stat = this.stat(binaryFile);
-                                                if (stat.mode & StatMode.IFDIR) throw new EISDIR(fileName);
-
-                                                const id = this.open(binaryFile, OpenFlag.READ);
-                                                lib.io.write(new Uint8Array(await this.read(id)), 1);
-                                                this.close(id);
+                                                const fd = this.open(fileName, OpenFlag.READ);
+                                                lib.io.write(new Uint8Array(await this.read(fd)), 1);
+                                                this.close(fd);
                                             } catch (e) {
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`cat: ${fileName}: そのようなファイルやディレクトリはありません\n`, 2);
