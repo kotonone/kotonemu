@@ -256,8 +256,8 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 const args = command.slice(1)
                                                 let logicalOption = true;
                                                 let isError = false
-                                                pwdArgs:for (const arg of args) {
-                                                    if(arg.startsWith("-")){
+                                                pwdArgs: for (const arg of args) {
+                                                    if (arg.startsWith("-")) {
                                                         for (const char of arg.slice(1)) {
                                                             if (char === "L") {
                                                                 logicalOption = true;
@@ -270,12 +270,12 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                                 break pwdArgs;
                                                             }
                                                         }
-                                                    } else{
+                                                    } else {
                                                         break pwdArgs;
                                                     }
                                                 }
 
-                                                if (!isError){
+                                                if (!isError) {
                                                     if (logicalOption) {
                                                         lib.io.write(this.env.PWD + "\n", 1);
                                                     } else {
@@ -334,9 +334,9 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
 
                                 async onStart(lib) {
                                     const args = this.args;
-                                    let isError = false
-                                    let notOptionIndex = 0
-                                    catArgs:for (const arg of args) {
+                                    let isError = false;
+                                    let notOptionIndex = 0;
+                                    catArgs: for (const arg of args) {
                                         if (arg === "--help") {
                                             lib.io.write(`使用法: cat [オプション]... [ファイル]...\n`, 2);
                                             isError = true;
