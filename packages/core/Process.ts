@@ -454,7 +454,6 @@ export class Process {
         process.open(process.tty, OpenFlag.READ);
         process.open(process.tty, OpenFlag.WRITE);
         process.open(process.tty, OpenFlag.WRITE);
-        // NOTE: process close
 
         await callback.bind(process)();
         this.children = this.children.filter(p => p.id !== process.id);

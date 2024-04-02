@@ -191,7 +191,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     if (userId === "a" && password === "b") {
                                         lib.io.write("Last login: Wed Dec  9 04:09:57 on tty1\n");
 
-                                        this.spawn(async function () {
+                                        await this.spawn(async function () {
                                             await this.exec("/bin/sh");
                                         });
                                     } else {
@@ -226,7 +226,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     const info = this.uname();
 
                                     while (true) {
-                                        lib.io.write(`[kotone@${info.nodename} ${this.env.PWD === "/" ? this.env.PWD : basename(this.env.PWD)}]$ `);
+                                        lib.io.write(`[kotone@${info.nodename} ${basename(this.env.PWD)}]$ `);
 
                                         const text = (await lib.io.read()).trimEnd();
                                         if (text.trim() === "") continue;
@@ -406,7 +406,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     // console.log(await this.read(fd))
                                     // this.close(fd);
 
-                                    this.spawn(async function() {
+                                    await this.spawn(async function() {
                                         await this.exec("/bin/login", [], {
                                             PWD: "/",
                                             PATH: "/bin:/sbin"
