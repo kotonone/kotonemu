@@ -165,12 +165,12 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
         if (typeof elem === "string"){
             continue;
         } else {
-            optionInfomation[elem.id] = {}
+            optionInfomation[elem.id] = {};
             if ("needsArgument" in elem) {
-                optionInfomation[elem.id].needsArgument = elem.needsArgument
+                optionInfomation[elem.id].needsArgument = elem.needsArgument;
             }
             if ("usesArgument" in elem) {
-                optionInfomation[elem.id].usesArgument = elem.usesArgument
+                optionInfomation[elem.id].usesArgument = elem.usesArgument;
             }
         }
     }
