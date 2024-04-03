@@ -139,3 +139,102 @@ export function split(content: string, variables: Record<string, string> = {}) {
             .replace(/\\e\d+/g, s => escapes[parseInt(s.slice(2))])
         );
 }
+
+type oneHyphenOptionsList = (string | { id: string, needsArgument?: boolean })[];
+type twoHyphensOptionsList = (string | { id: string, usesArgument?: boolean, needsArgument?: boolean })[];
+type optionsData = { index: { [id: string]: number }, arguments: { [id: string]: unknown }, lastOptionIndex: number, invalidOption?: string };
+/**
+ * コマンドの引数からオプションについての情報を引き出します。  
+ * オプションではない引数が見つかった時点で停止します。  
+ * oneHyphen/twoHyphensに含まれないオプション・引数を受け付けないのに引数が含まれるオプションが見つかった場合はその時点で戻り値にinvalidOptionを含めてとして停止します。  
+ * 
+ * @param args オプションから始まる引数の配列
+ * @param oneHyphen ハイフンが一つのオプションの配列
+ * @param twoHyphens ハイフンが二つのオプションの配列
+ * @returns オプションに関する情報(Object型)  
+ * index: key:オプション名 value:オプションの順番(一番最初のオプションから重複ありで番号をつけ、一番最後のものを登録しています。)
+ * arguments key:オプション名 value:オプションの引数(引数が用いられるオプションのみ、一番最後の引数を登録します。)
+ * lastOptionIndex: argsのうちオプションである一番最後の引数の添字(オプションが含まれない場合は-1となります。)
+ * invalidOption: 一番最初の不正なオプション
+ */
+export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [], twoHyphens: twoHyphensOptionsList = []) {
+    const oneHyphenOptionsName = oneHyphen.map(e => (typeof e === "string") ? e : e.id);
+    const twoHyphensOptionsName = twoHyphens.map(e => (typeof e === "string") ? e : e.id);
+    const optionInfomation: { [key:string]: {usesArgument?: boolean, needsArgument?: boolean}} = {};
+    for (const elem of twoHyphens.concat(oneHyphen)) {
+        if (typeof elem === "string"){
+            continue;
+        } else {
+            optionInfomation[elem.id] = {};
+            if ("needsArgument" in elem) {
+                optionInfomation[elem.id].needsArgument = elem.needsArgument;
+            }
+            if ("usesArgument" in elem) {
+                optionInfomation[elem.id].usesArgument = elem.usesArgument;
+            }
+        }
+    }
+
+    const returnOptionsData: optionsData = { index:{}, arguments:{}, lastOptionIndex: -1};
+    let optionsCount = 0;
+    let needContinue = false
+    for (const arg of args) {
+        if (returnOptionsData.invalidOption) {
+            break;
+        } else if (needContinue) {
+            needContinue = false;
+            continue;
+        } else if (!arg.startsWith("-") || arg === "--") {
+            break;
+        } else if (arg.startsWith("--")) {
+            if (arg.includes("=")) {
+                const optionName = arg.slice(0, arg.indexOf('='));
+                if (twoHyphensOptionsName.includes(optionName) && optionName in optionInfomation && optionInfomation[optionName].usesArgument) {
+                    returnOptionsData.index[optionName] = optionsCount++;
+                    returnOptionsData.lastOptionIndex++;
+                    returnOptionsData.arguments[optionName] = arg.replace(optionName + "=", "")
+                } else {
+                    returnOptionsData.invalidOption = optionName;
+                }
+            } else {
+                const optionName = arg;
+                if (twoHyphensOptionsName.includes(optionName)) {
+                    returnOptionsData.index[optionName] = optionsCount++;
+                    returnOptionsData.lastOptionIndex++;
+                    if (optionName in optionInfomation && optionInfomation[optionName].usesArgument && optionInfomation[optionName].needsArgument) {
+                        returnOptionsData.arguments[optionName] = args[++returnOptionsData.lastOptionIndex]
+                        needContinue = true
+                    }
+                } else {
+                    returnOptionsData.invalidOption = optionName;
+                }
+            }
+        } else if (arg.startsWith("-")) {
+            returnOptionsData.lastOptionIndex++;
+            for (let i = 1; i < arg.length; i++) {
+                const optionName = `-${arg[i]}`;
+                if (oneHyphenOptionsName.includes(optionName)) {
+                    returnOptionsData.index[optionName] = optionsCount++;
+                    if (optionName in optionInfomation && optionInfomation[optionName].needsArgument) {
+                            if (i == arg.length - 1) {
+                                returnOptionsData.arguments[optionName] = args[++returnOptionsData.lastOptionIndex]
+                                needContinue = true
+                            } else {
+                                returnOptionsData.arguments[optionName] = arg.slice(i + 1);
+                                break;
+                            }
+                    }
+                } else {
+                    returnOptionsData.invalidOption = optionName;
+                    break;
+                }
+            }            
+        }
+    }
+    for (const elem of [...twoHyphensOptionsName, ...oneHyphenOptionsName]) {
+        if (returnOptionsData.index[elem] === undefined) {
+            returnOptionsData.index[elem] = -1;
+        }
+    };
+    return returnOptionsData;
+}
