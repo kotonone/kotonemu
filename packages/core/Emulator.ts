@@ -1,4 +1,4 @@
-import { Directory } from "./File";
+import { Directory, File } from "./File";
 import { UnlinkFlag } from "./Flags";
 import { Process } from "./Process";
 import { join } from "./Utils";
@@ -62,7 +62,7 @@ export class Emulator {
     /** エミュレーター情報 */
     public info: EmulatorInfo;
 
-    public constructor(config: EmulatorInit, storage: Directory["children"]) {
+    public constructor(config: EmulatorInit, storage: File[]) {
         this.info = config.info ?? <EmulatorInfo>{
             nodename: "kotonemu",
             os_name: "Kotonemu",
@@ -80,7 +80,7 @@ export class Emulator {
 
         const emulatorThis = this;
         this.rootProcess.spawn(async function () {
-            this.exec(join(emulatorThis.SYSTEM_BIN_DIRECTORY, "init"));
-        })
+            await this.exec(join(emulatorThis.SYSTEM_BIN_DIRECTORY, "init"));
+        });
     }
 }

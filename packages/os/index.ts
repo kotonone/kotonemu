@@ -3,11 +3,11 @@ import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
 import { OpenFlag, StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
-import { basename, join, split, parseOptions } from "@/core/Utils";
-import { Directory } from "@/core/File";
+import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
+import { File } from "@/core/File";
 
 /** ShalfeltOS を生成します。 */
-export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: Directory["children"] } {
+export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: File[] } {
     return {
         options: {
             info: {
@@ -191,7 +191,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     if (userId === "a" && password === "b") {
                                         lib.io.write("Last login: Wed Dec  9 04:09:57 on tty1\n");
 
-                                        this.spawn(async function () {
+                                        await this.spawn(async function () {
                                             await this.exec("/bin/sh");
                                         });
                                     } else {
@@ -226,7 +226,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                     const info = this.uname();
 
                                     while (true) {
-                                        lib.io.write(`[kotone@${info.nodename} ${this.env.PWD === "/" ? this.env.PWD : basename(this.env.PWD)}]$ `);
+                                        lib.io.write(`[kotone@${info.nodename} ${basename(this.env.PWD)}]$ `);
 
                                         const text = (await lib.io.read()).trimEnd();
                                         if (text.trim() === "") continue;
@@ -367,43 +367,23 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                 protected: true,
 
                                 async onStart(lib) {
-                                    const info = this.uname();
-                                    lib.io.write(`\n${info.os_name} ${info.os_version}\n`);
-                                    lib.io.write("Copyright (C) 2024 Kotonone and ShalfeltOS contributors\n\n");
+                                    try {
+                                        const info = this.uname();
+                                        lib.io.write(`\n${info.os_name} ${info.os_version}\n`);
+                                        lib.io.write("Copyright (C) 2024 Kotonone and ShalfeltOS contributors\n\n");
 
-                                    // const fd = this.open("filelink", OpenFlag.READ | OpenFlag.WRITE);
-                                    // this.seek(fd, 3);
-                                    // this.write(fd, new Uint8Array([97, 98, 99]));
-                                    // this.seek(fd, 0);
-                                    // console.log(await this.read(fd))
-                                    // this.close(fd);
-
-                                    this.spawn(async function() {
-                                        await this.exec("/bin/login", [], {
-                                            PWD: "/",
-                                            PATH: "/bin:/sbin"
+                                        await this.spawn(async function() {
+                                            await this.exec("/bin/login", [], {
+                                                PWD: "/",
+                                                PATH: "/bin:/sbin"
+                                            });
                                         });
-                                    });
-
-                                    // this.write(1, Buffer.from("===== Process Tree =====\n"));
-                                    // const processFlatFunc = (p: Process): string[] => [`${p.name} (${p.id}) [${p.tty}]`, ...p.children.flatMap(processFlatFunc).map(l => "    " + l)];
-                                    // this.write(1, Buffer.from([emu.rootProcess].flatMap(processFlatFunc).join("\n") + "\n"));
-
-                                    // this.write(1, Buffer.from("===== Storage Tree =====\n"));
-                                    // const storageFlatFunc = (f: File): string[] => [`${f.name}`, ...(isDirectory(f) ? f.children.flatMap(storageFlatFunc).map(l => "    " + l) : [])];
-                                    // this.write(1, Buffer.from([emu.storage].flatMap(storageFlatFunc).join("\n") + "\n"));
-
-                                    // const ttyFd = emu.open("/dev/tty1", OpenFlag.READ | OpenFlag.WRITE);
-                                    // while (true) {
-                                    //     const buf = await emu.read(ttyFd);
-                                    //     emu.write(ttyFd, buf);
-                                    // }
-
-                                    // const ttyLinkFd = emu.open("/ttylink", OpenFlag.READ | OpenFlag.WRITE);
-                                    // while (true) {
-                                    //     const buf = await emu.read(ttyLinkFd);
-                                    //     emu.write(ttyLinkFd, buf);
-                                    // }
+                                    } catch (e) {
+                                        console.error(e);
+                                        terminal.write(`\x1b[2J\x1b[H\x1b[0m\x1b[40m  ${"\x1b[43m  \x1b[40m  ".repeat(10)}\n\n`);
+                                        terminal.write(`\x1b[0m  \x1b[1m\x1b[4m\x1b[33mShalfeltOS Kernel Panic\n\n`);
+                                        terminal.write(`\x1b[0m  ${(e as Error).stack}`);
+                                    }
                                 }
                             }
                         ]

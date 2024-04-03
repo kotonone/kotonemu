@@ -1,3 +1,5 @@
+import { PathError } from ".";
+
 export const PATH_SEPARATOR = "/";
 
 /** 偽の ELF ファイルのように見える内容を作成します。 */
@@ -24,25 +26,58 @@ export function concatArrayBuffer(...buf: ArrayBuffer[]): ArrayBuffer {
 }
 
 /**
- * パス名をエントリ名の配列に変換します。
- * 二重のパス区切り文字・末尾のパス区切り文字は削除されます。
- * 先頭のパス区切り文字は削除されません。空の文字列が入ります。
+ * パスを絶対パスのエントリ名の配列に変換します。
+ * @param pathname パス
+ * @param [root="/"] 参照を開始するディレクトリ
+ * @param [sanitize=true] `.` や `..` などのパス指定文字を正規化します。
  */
-export function extractEntryNames(pathname: string): string[] {
-    return pathname
+export function resolve(pathname: string, root: string = PATH_SEPARATOR, sanitize: boolean = true): string[] {
+    // NOTE: root を /a/b/c の形に正規化
+    if (!root.startsWith(PATH_SEPARATOR)) throw new PathError("The root path must be begin with a path separator.");
+    if (!root.endsWith(PATH_SEPARATOR)) root += PATH_SEPARATOR;
+    // NOTE: pathname が絶対パスであると明示されている時、root はルートになる
+    if (pathname.startsWith(PATH_SEPARATOR)) root = PATH_SEPARATOR;
+    // NOTE: pathname を a/b/c の形に正規化
+    if (pathname.endsWith(PATH_SEPARATOR)) pathname = trimEnd(pathname, PATH_SEPARATOR);
+
+    const entryNames =
+        // NOTE: root と pathname を連結する。
+        (pathname.startsWith(PATH_SEPARATOR) ? pathname : root + pathname)
 
         // NOTE: プレースホルダー化
         .replaceAll("$", "$dollar")
         .replaceAll("\\" + PATH_SEPARATOR, "$pathsep")
 
+        // NOTE: 分割
+        .split(PATH_SEPARATOR)
+
         // NOTE: プレースホルダーを復元
-        .split(PATH_SEPARATOR).map(p => p
+        .map(p => p
             .replaceAll("$dollar", "$")
             .replaceAll("$pathsep", PATH_SEPARATOR)
         )
 
-        // NOTE: 二重パス区切り・末尾パス区切りを消去
-        .filter((v, i) => !(i !== 0 && v === ""));
+        // NOTE: パス区切りを消去
+        .filter(v => v !== "");
+
+    if (sanitize) {
+        let sanitizedEntryNames: string[] = [];
+
+        for (const entry of entryNames) {
+            if (entry === ".") {
+                continue;
+                // TODO: ユーザーディレクトリを Process 側で解決
+            } else if (entry === "..") {
+                sanitizedEntryNames.pop();
+            } else {
+                sanitizedEntryNames.push(entry);
+            }
+        }
+
+        return sanitizedEntryNames;
+    } else {
+        return entryNames;
+    }
 }
 /**
  * 文字列の終端にある指定した文字列の連続を削除します。
@@ -62,11 +97,11 @@ export function join(...pathnames: string[]): string {
 }
 /** パス名からディレクトリパスを取得します。 */
 export function dirname(pathname: string): string {
-    return join(...extractEntryNames(pathname).slice(0, -1));
+    return join(...resolve(pathname, PATH_SEPARATOR + ".", false).slice(0, -1));
 }
 /** パス名からファイル名を取得します。 */
 export function basename(pathname: string): string {
-    return extractEntryNames(pathname).at(-1)!;
+    return resolve(pathname).at(-1) ?? PATH_SEPARATOR;
 }
 
 /**

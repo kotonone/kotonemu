@@ -7,6 +7,14 @@ export class EmulatorError extends Error {
     }
 }
 
+/** パスに関するエラー */
+export class PathError extends EmulatorError {
+    constructor(message?: string) {
+        super();
+        this.message = message ?? "Path error";
+    }
+}
+
 /** エミュレーターのシステムエラー */
 export class OSError extends EmulatorError {
     constructor() {

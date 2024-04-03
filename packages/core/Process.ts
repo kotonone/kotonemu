@@ -1,8 +1,8 @@
 import { Emulator, EmulatorInfo } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD } from "./Error";
-import { File, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile } from "./File";
+import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
 import { OpenFlag, StdReadFlag, UnlinkFlag } from "./Flags";
-import { extractEntryNames, dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR } from "./Utils";
+import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
 
 /** ファイルの状態を示すインタフェース */
 export interface Stat {
@@ -122,40 +122,11 @@ export class Process {
         return fdData;
     }
     /**
-     * パス名を絶対パスに正規化します。
-     * この関数はカレントディレクトリを参照します。
-     */
-    private _resolvePathname(pathname: string): string[] {
-        const entryNames = extractEntryNames(pathname).filter((v, i) => !(i !== 0 && v === ""));
-
-        let absolutePathname: string[] = [];
-
-        for (const entry of entryNames) {
-            if (entry === "") {
-                continue;
-            } else if (entry === ".") {
-                if (absolutePathname.length === 0) {
-                    absolutePathname.push(...extractEntryNames(this.env.PWD).slice(1));
-                } else {
-                    continue;
-                }
-            } else if (entry === "..") {
-                absolutePathname.pop();
-            } else if (entry === "~") {
-                // TODO: User directory
-            } else {
-                absolutePathname.push(entry);
-            }
-        }
-
-        return ["", ...absolutePathname];
-    }
-    /**
      * エントリ名を使用して子エントリを取得します。
      * @param entry 親エントリ
      * @param name 子エントリ名
      */
-    private _getEntry(entry: Directory, name: string): File | null {
+    private _getEntry(entry: Directory, name: string): IFile | null {
         const e = entry.children.find(e => e.name === name);
         if (e && e.deleted) return null;
         return e ?? null;
@@ -165,10 +136,10 @@ export class Process {
      * @param pathname パス名
      * @param resolveSymlinkAsFile シンボリックリンクが参照された際、リンク先を参照するかどうか
      */
-    private _getEntryFromPathname(pathname: string, resolveSymlinkAsFile: boolean = false): File {
-        let pointer: File = this.emulator.storage;
+    private _getEntryFromPathname(pathname: string, resolveSymlinkAsFile: boolean = false): IFile {
+        let pointer: IFile = this.emulator.storage;
 
-        const entryNames = this._resolvePathname(pathname).slice(1);
+        const entryNames = resolve(pathname, this.env.PWD);
 
         for (const p of entryNames) {
             if (isSymbolicLink(pointer)) {
@@ -178,7 +149,7 @@ export class Process {
                 throw new ENOENT(pathname);
             }
 
-            const entry: Directory | File | null = this._getEntry(pointer ?? this.emulator.storage, p);
+            const entry: Directory | IFile | null = this._getEntry(pointer ?? this.emulator.storage, p);
             if (entry === null) {
                 throw new ENOENT(pathname);
             } else {
@@ -197,7 +168,7 @@ export class Process {
      * @param parent 作成するエントリの親エントリ
      * @param entry 作成するエントリオブジェクト
      */
-    private _createEntry<E extends Directory["children"][number]>(parent: Directory | string, entry: E): void {
+    private _createEntry<E extends File>(parent: Directory | string, entry: E): void {
         const parentEntry = typeof parent === "string" ? this._getEntryFromPathname(parent) : parent;
 
         if (entry.name.startsWith(this.emulator.PROCESS_DIRECTORY)) {
@@ -417,7 +388,7 @@ export class Process {
             throw new ENOTDIR(pathname);
         }
 
-        return entry.children.map(c => c.name);
+        return entry.children.filter(c => !c.deleted).map(c => c.name);
     }
     /**
      * ディレクトリを削除します。
@@ -483,7 +454,6 @@ export class Process {
         process.open(process.tty, OpenFlag.READ);
         process.open(process.tty, OpenFlag.WRITE);
         process.open(process.tty, OpenFlag.WRITE);
-        // NOTE: process close
 
         await callback.bind(process)();
         this.children = this.children.filter(p => p.id !== process.id);
@@ -544,7 +514,7 @@ export class Process {
                     },
                 },
                 path: {
-                    absolute: (pathname: string) => join(...this._resolvePathname(pathname))
+                    absolute: (pathname: string) => PATH_SEPARATOR + join(...resolve(pathname, this.env.PWD))
                 }
             });
         } else if (isRegularFile(entry)) {
