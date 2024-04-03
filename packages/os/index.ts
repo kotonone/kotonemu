@@ -242,7 +242,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                             } else if (command.length === 2) {
                                                 try {
                                                     const stat = this.stat(command[1]);
-                                                    if ((stat.mode & StatMode.IFDIR) == 16384) {
+                                                    if (stat.mode & StatMode.IFDIR) {
                                                         this.env.PWD = lib.path.absolute(command[1]);
                                                     } else {
                                                         lib.io.write(`-fsh: ${command[0]}: ${command[1]}: ディレクトリではありません\n`, 2);
