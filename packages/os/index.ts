@@ -241,8 +241,12 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                                                 this.env.PWD = lib.path.absolute("~");
                                             } else if (command.length === 2) {
                                                 try {
-                                                    this.stat(command[1]);
-                                                    this.env.PWD = lib.path.absolute(command[1]);
+                                                    const stat = this.stat(command[1]);
+                                                    if ((stat.mode & StatMode.IFDIR) == 16384) {
+                                                        this.env.PWD = lib.path.absolute(command[1]);
+                                                    } else {
+                                                        lib.io.write(`-fsh: ${command[0]}: ${command[1]}: ディレクトリではありません\n`, 2);
+                                                    }
                                                 } catch {
                                                     lib.io.write(`-fsh: ${command[0]}: ${command[1]}: そのようなファイルやディレクトリはありません\n`, 2);
                                                 }
