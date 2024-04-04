@@ -373,7 +373,7 @@ ankosoba`)
                                         } else if (options.index["--version"] !== -1) {
                                             lib.io.write(
 `cat (ShalfeltOS Coreutils) 1.0.0
-Copyright (c) 2024 Kotonone and kotonemu contributors
+Copyright (c) 2024 Kotonone and ShalfeltOS contributors
 MIT License: https://opensource.org/license/mit.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
