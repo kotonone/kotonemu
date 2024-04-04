@@ -372,7 +372,7 @@ ankosoba`)
 `, 1);
                                         } else if (options.index["--version"] !== -1) {
                                             lib.io.write(
-`cat (Kotonone coreutils) 1.0.0
+`cat (ShalfeltOS Coreutils) 1.0.0
 Copyright (c) 2024 Kotonone and kotonemu contributors
 MIT License: https://opensource.org/license/mit.
 This is free software: you are free to change and redistribute it.
