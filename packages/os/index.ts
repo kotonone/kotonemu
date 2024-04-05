@@ -289,6 +289,27 @@ ankosoba`)
                                                     }
                                                 }
                                             }
+                                        } else if (command[0] === "clear") {
+                                            if (command.length === 1) {
+                                                lib.io.write("\x1b[2J", 1);
+                                                lib.io.write("\x1b[H", 1);
+                                            } else if (command.length >= 2) {
+                                                // TODO: Support for options...?
+                                                lib.io.write(`使用例: clear\n`, 2);/*
+                                                let options = parseOptions(command.slice(1),["-P","-L"])
+
+                                                if (options.invalidOption) {
+                                                    lib.io.write(`-fsh: ${command[0]}: ${options.invalidOption}: 無効なオプションです\n`, 2);
+                                                    lib.io.write(`${command[0]}: 使用法: pwd [-LP]\n`, 2);
+                                                }
+                                                else {
+                                                    if (options.index["-P"] <= options.index["-L"]) {
+                                                        lib.io.write(this.env.PWD + "\n", 1);
+                                                    } else {
+                                                        lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
+                                                    }
+                                                }*/
+                                            }
                                         } else {
                                             let binaryFile: string | null = null;
                                             for (const path of (this.env.PATH ?? "").split(":")) {
