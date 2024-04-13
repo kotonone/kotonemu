@@ -612,10 +612,14 @@ There is NO WARRANTY, to the extent permitted by law.
                                             }
                                             if (options.index["-F"] !== -1) {
                                                 const stat = this.stat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
-                                                // TODO: executable-file & symlink
+                                                // TODO: executable-file
                                                 if (stat.mode & StatMode.IFDIR) {
                                                     fileData += "/";
-                                                }
+                                                } else if (stat.mode & StatMode.IFLNK) {
+                                                    fileData += "@";
+                                                }/* else if (stat.mode & StatMode.IFDIR) {
+                                                    fileData += "/";
+                                                }/*/
                                             }
                                             if (options.index["-Q"] === -1){
                                                 returnDataList.push(fileData);
