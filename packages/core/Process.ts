@@ -165,10 +165,6 @@ export class Process {
     private _createEntry<E extends File>(parent: Directory | string, entry: E): void {
         const parentEntry = typeof parent === "string" ? this._getEntryFromPathname(parent) : parent;
 
-        if (entry.name.startsWith(this.emulator.PROCESS_DIRECTORY)) {
-            console.trace(entry);
-        }
-
         if (!isDirectory(parentEntry)) {
             throw new ENOTDIR(typeof parent === "string" ? parent : "(unknown path)/" + parent.name);
         }
