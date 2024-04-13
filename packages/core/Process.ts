@@ -19,7 +19,6 @@ export interface Stat {
 // https://jp.xlsoft.com/documents/intel/cvf/vf-html/az/az11_89.htm
 /** {@link Stat} の mode アクセス保護フィールドに付与される追加情報 */
 export enum StatMode {
-    IFMT  = 0o170000,
     IFDIR = 0o040000,
     IFCHR = 0o020000,
     IFREG = 0o100000,
@@ -313,7 +312,6 @@ export class Process {
 
     private _stat(entry: IFile): Stat {
         let mode: number =
-            StatMode.IFMT |
             (isDirectory(entry) ? StatMode.IFDIR : 0) |
             (isRegularFile(entry) ? StatMode.IFREG : 0) |
             (isDeviceFile(entry) ? StatMode.IFCHR : 0) |
