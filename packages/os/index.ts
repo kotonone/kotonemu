@@ -598,7 +598,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         if (options.index["-A"] < options.index["-a"]) {
                                             filesListArr = [".", "..", ...filesListArr];
                                         }
-                                        filesListArr.sort()
+                                        filesListArr.sort();
                                         if (options.index["-r"] !== -1) {
                                             filesListArr.reverse();
                                         }
@@ -611,24 +611,24 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 }
                                             }
                                             if (options.index["-F"] !== -1) {
-                                                const stat = this.stat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`)
+                                                const stat = this.stat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
                                                 // TODO: executable-file & symlink
                                                 if (stat.mode & StatMode.IFDIR) {
                                                     fileData += "/";
                                                 }
                                             }
                                             if (options.index["-Q"] === -1){
-                                                returnDataList.push(fileData)
+                                                returnDataList.push(fileData);
                                             } else {
-                                                returnDataList.push(`"${fileData}"`)
+                                                returnDataList.push(`"${fileData}"`);
                                             }
                                         }
                                         if (options.index["-1"] === -1 && options.index["-m"] === -1) {
-                                            return returnDataList.join("  ")
+                                            return returnDataList.join("  ");
                                         } else if (options.index["-1"] < options.index["-m"]) {
-                                            return returnDataList.join(", ")
+                                            return returnDataList.join(", ");
                                         } else {
-                                            return returnDataList.join("\n")
+                                            return returnDataList.join("\n");
                                         }
                                     }
                                     if (directries.length === 1) {
@@ -644,18 +644,17 @@ There is NO WARRANTY, to the extent permitted by law.
                                             }
                                         }
                                     } else {
-                                        const list = []
+                                        const list = [];
                                         for (let i = 0; i < directries.length; i++) {
                                             const directoryPath = directries[i]
                                             try {
-                                                const files = this.readdir(directoryPath)
-                                                list.push(`${directoryPath}:\n${filesList(directoryPath)}`)
+                                                list.push(`${directoryPath}:\n${filesList(directoryPath)}`);
                                             } catch (e){
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
                                                     return;
                                                 } else if (e instanceof ENOTDIR) {
-                                                    list.push(directoryPath)
+                                                    list.push(directoryPath);
                                                 } else {
                                                     throw e;
                                                 }
