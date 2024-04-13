@@ -617,9 +617,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     fileData += "/";
                                                 } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
                                                     fileData += "@";
-                                                }/* else if (stat.mode & StatMode.IFDIR) {
-                                                    fileData += "/";
-                                                }/*/
+                                                } else if (stat.mode & 0o100) {
+                                                    fileData += "*";
+                                                }
                                             }
                                             if (options.index["-Q"] === -1){
                                                 returnDataList.push(fileData);
