@@ -1,8 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
-import { OpenFlag, StdReadFlag } from "@/core/Flags";
-import { StatMode } from "@/core/Process";
+import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
 import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
 import { File } from "@/core/File";
 
