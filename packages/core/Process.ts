@@ -1,7 +1,7 @@
 import { Emulator, EmulatorInfo } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
-import { OpenFlag, StdReadFlag, UnlinkFlag } from "./Flags";
+import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
 import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
 
 /** ファイルの状態を示すインタフェース */
@@ -14,15 +14,6 @@ export interface Stat {
     group: number;
     /** ファイルサイズ */
     size: number;
-}
-
-// https://jp.xlsoft.com/documents/intel/cvf/vf-html/az/az11_89.htm
-/** {@link Stat} の mode アクセス保護フィールドに付与される追加情報 */
-export enum StatMode {
-    IFDIR = 0o040000,
-    IFCHR = 0o020000,
-    IFREG = 0o100000,
-    IFLNK = 0o120000
 }
 
 export type FileDescriptorData = {
@@ -173,10 +164,6 @@ export class Process {
      */
     private _createEntry<E extends File>(parent: Directory | string, entry: E): void {
         const parentEntry = typeof parent === "string" ? this._getEntryFromPathname(parent) : parent;
-
-        if (entry.name.startsWith(this.emulator.PROCESS_DIRECTORY)) {
-            console.trace(entry);
-        }
 
         if (!isDirectory(parentEntry)) {
             throw new ENOTDIR(typeof parent === "string" ? parent : "(unknown path)/" + parent.name);
