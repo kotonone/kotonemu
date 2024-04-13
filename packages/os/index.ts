@@ -1,6 +1,6 @@
 import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
-import { EISDIR, ELIBBAD, ENOENT } from "@/core/Error";
+import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StdReadFlag } from "@/core/Flags";
 import { StatMode } from "@/core/Process";
 import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
@@ -90,6 +90,15 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                         mode: 0o777,
                         deleted: false,
                         data: new Uint8Array([97, 98, 99, 100, 101, 102, 103])
+                    },
+                    {
+                        name: ".hidden.txt",
+                        type: "regular-file",
+                        owner: 0,
+                        group: 0,
+                        mode: 0o777,
+                        deleted: false,
+                        data: new Uint8Array([104, 105, 100, 100, 101, 110])
                     },
                     {
                         name: "ankosoba.txt",
@@ -561,7 +570,102 @@ There is NO WARRANTY, to the extent permitted by law.
                                         }
                                     }
                                 }
-                            }
+                            },
+                            {
+                                name: "ls",
+                                type: "executable-file",
+                                owner: 0,
+                                group: 0,
+                                mode: 0o777,
+                                deleted: false,
+                                protected: true,
+
+                                async onStart(lib) {
+                                    const args = this.args;
+                                    // TODO: Add more options
+                                    let options = parseOptions(
+                                        args,
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q"],
+                                        [],
+                                        { stopInvalidOption: false }
+                                    );
+                                    let directries = options.arguments;
+                                    if (directries.length === 0) {
+                                        directries.push("./");
+                                    }
+                                    const  filesList = (dir: string) => {
+                                        let filesListArr = this.readdir(dir);
+                                        if (options.index["-A"] < options.index["-a"]) {
+                                            filesListArr = [".", "..", ...filesListArr];
+                                        }
+                                        filesListArr.sort()
+                                        if (options.index["-r"] !== -1) {
+                                            filesListArr.reverse();
+                                        }
+                                        const returnDataList = [];
+                                        for (const fileName of filesListArr) {
+                                            let fileData = fileName;
+                                            if (options.index["-A"] === -1 && options.index["-a"] === -1) {
+                                                if (fileName.startsWith(".")) {
+                                                    continue;
+                                                }
+                                            }
+                                            if (options.index["-F"] !== -1) {
+                                                const stat = this.stat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`)
+                                                // TODO: executable-file & symlink
+                                                if (stat.mode & StatMode.IFDIR) {
+                                                    fileData += "/";
+                                                }
+                                            }
+                                            if (options.index["-Q"] === -1){
+                                                returnDataList.push(fileData)
+                                            } else {
+                                                returnDataList.push(`"${fileData}"`)
+                                            }
+                                        }
+                                        if (options.index["-1"] === -1 && options.index["-m"] === -1) {
+                                            return returnDataList.join("  ")
+                                        } else if (options.index["-1"] < options.index["-m"]) {
+                                            return returnDataList.join(", ")
+                                        } else {
+                                            return returnDataList.join("\n")
+                                        }
+                                    }
+                                    if (directries.length === 1) {
+                                        try {
+                                            lib.io.write(filesList(directries[0]), 1);
+                                        } catch (e){
+                                            if (e instanceof ENOENT) {
+                                                lib.io.write(`ls: '${directries[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
+                                            } else if (e instanceof ENOTDIR) {
+                                                lib.io.write(directries[0], 1);
+                                            } else {
+                                                throw e;
+                                            }
+                                        }
+                                    } else {
+                                        const list = []
+                                        for (let i = 0; i < directries.length; i++) {
+                                            const directoryPath = directries[i]
+                                            try {
+                                                const files = this.readdir(directoryPath)
+                                                list.push(`${directoryPath}:\n${filesList(directoryPath)}`)
+                                            } catch (e){
+                                                if (e instanceof ENOENT) {
+                                                    lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
+                                                    return;
+                                                } else if (e instanceof ENOTDIR) {
+                                                    list.push(directoryPath)
+                                                } else {
+                                                    throw e;
+                                                }
+                                            }
+                                        }
+                                        lib.io.write(list.join("\n\n"), 1);
+                                    }
+                                    lib.io.write("\n", 1);
+                                }
+                            },
                         ]
                     },
                     {
