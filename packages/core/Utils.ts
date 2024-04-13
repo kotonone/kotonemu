@@ -97,7 +97,7 @@ export function join(...pathnames: string[]): string {
 }
 /** パス名からディレクトリパスを取得します。 */
 export function dirname(pathname: string): string {
-    return join(...resolve(pathname, PATH_SEPARATOR + ".", false).slice(0, -1));
+    return (pathname.startsWith(PATH_SEPARATOR) ? PATH_SEPARATOR : "") + join(...resolve(pathname, PATH_SEPARATOR, false).slice(0, -1));
 }
 /** パス名からファイル名を取得します。 */
 export function basename(pathname: string): string {
