@@ -589,21 +589,21 @@ There is NO WARRANTY, to the extent permitted by law.
                                         [],
                                         { stopInvalidOption: false }
                                     );
-                                    let directries = options.arguments;
-                                    if (directries.length === 0) {
-                                        directries.push("./");
+                                    let directories = options.arguments;
+                                    if (directories.length === 0) {
+                                        directories.push("./");
                                     }
-                                    const  filesList = (dir: string) => {
-                                        let filesListArr = this.readdir(dir);
+                                    const getFileList = (dir: string) => {
+                                        let fileList = this.readdir(dir);
                                         if (options.index["-A"] < options.index["-a"]) {
-                                            filesListArr = [".", "..", ...filesListArr];
+                                            fileList = [".", "..", ...fileList];
                                         }
-                                        filesListArr.sort();
+                                        fileList.sort();
                                         if (options.index["-r"] !== -1) {
-                                            filesListArr.reverse();
+                                            fileList.reverse();
                                         }
                                         const returnDataList = [];
-                                        for (const fileName of filesListArr) {
+                                        for (const fileName of fileList) {
                                             let fileData = fileName;
                                             if (options.index["-A"] === -1 && options.index["-a"] === -1) {
                                                 if (fileName.startsWith(".")) {
@@ -631,24 +631,24 @@ There is NO WARRANTY, to the extent permitted by law.
                                             return returnDataList.join("\n");
                                         }
                                     }
-                                    if (directries.length === 1) {
+                                    if (directories.length === 1) {
                                         try {
-                                            lib.io.write(filesList(directries[0]), 1);
+                                            lib.io.write(getFileList(directories[0]), 1);
                                         } catch (e){
                                             if (e instanceof ENOENT) {
-                                                lib.io.write(`ls: '${directries[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
+                                                lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
                                             } else if (e instanceof ENOTDIR) {
-                                                lib.io.write(directries[0], 1);
+                                                lib.io.write(directories[0], 1);
                                             } else {
                                                 throw e;
                                             }
                                         }
                                     } else {
                                         const list = [];
-                                        for (let i = 0; i < directries.length; i++) {
-                                            const directoryPath = directries[i]
+                                        for (let i = 0; i < directories.length; i++) {
+                                            const directoryPath = directories[i]
                                             try {
-                                                list.push(`${directoryPath}:\n${filesList(directoryPath)}`);
+                                                list.push(`${directoryPath}:\n${getFileList(directoryPath)}`);
                                             } catch (e){
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
