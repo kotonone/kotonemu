@@ -611,11 +611,11 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 }
                                             }
                                             if (options.index["-F"] !== -1) {
-                                                const stat = this.stat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
+                                                const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
                                                 // TODO: executable-file
                                                 if (stat.mode & StatMode.IFDIR) {
                                                     fileData += "/";
-                                                } else if (stat.mode & StatMode.IFLNK) {
+                                                } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
                                                     fileData += "@";
                                                 }/* else if (stat.mode & StatMode.IFDIR) {
                                                     fileData += "/";
