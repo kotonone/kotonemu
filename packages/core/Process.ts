@@ -16,10 +16,14 @@ export interface Stat {
     size: number;
 }
 
+// https://jp.xlsoft.com/documents/intel/cvf/vf-html/az/az11_89.htm
 /** {@link Stat} の mode アクセス保護フィールドに付与される追加情報 */
 export enum StatMode {
+    IFMT  = 0o170000,
     IFDIR = 0o040000,
+    IFCHR = 0o020000,
     IFREG = 0o100000,
+    IFLNK = 0o120000
 }
 
 export type FileDescriptorData = {
@@ -306,17 +310,14 @@ export class Process {
             throw new EIO();
         }
     }
-    /**
-     * ファイルの状態を取得します。
-     * @param pathname パス名
-     */
-    public stat(pathname: string): Stat {
-        console.log(pathname);
-        const entry = this._getEntryFromPathname(pathname);
 
+    private _stat(entry: IFile): Stat {
         let mode: number =
+            StatMode.IFMT |
             (isDirectory(entry) ? StatMode.IFDIR : 0) |
-            (isRegularFile(entry) ? StatMode.IFREG : 0)
+            (isRegularFile(entry) ? StatMode.IFREG : 0) |
+            (isDeviceFile(entry) ? StatMode.IFCHR : 0) |
+            (isSymbolicLink(entry) ? StatMode.IFLNK : 0);
 
         return {
             mode: entry.mode | mode,
@@ -325,6 +326,29 @@ export class Process {
             size: 0, // TODO: size
             // TODO: ctime, atime, mtime
         };
+    }
+    /**
+     * ファイルの状態を取得します。
+     * @param pathname パス名
+     */
+    public stat(pathname: string): Stat {
+        return this._stat(this._getEntryFromPathname(pathname, true));
+    }
+    /**
+     * ファイルの状態を取得します。シンボリックリンクの場合でも、リンクを解決しません。
+     * @param pathname パス名
+     */
+    public lstat(pathname: string): Stat {
+        return this._stat(this._getEntryFromPathname(pathname));
+    }
+    /**
+     * ファイルディスクリプタからファイルの状態を取得します。
+     * @param fd ファイルディスクリプタ
+     */
+    public fstat(fd: number): Stat {
+        const fdd = this._requireFileDescriptorData(fd);
+        const entry = this._getEntryFromPathname(fdd.pathname);
+        return this._stat(entry);
     }
 
     /**
