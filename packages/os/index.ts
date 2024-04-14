@@ -672,7 +672,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     fileList.sort((a, b) => {
                                                         let aType = -1;
                                                         let bType = -1;
-                                                        if ((a.match( /\./g ) || [] ).length === 0) {
+                                                        if (!a.includes(".")) {
                                                             aType = 0;
                                                         } else if (a === ".") {
                                                             aType = 1;
@@ -684,7 +684,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                             aType = Infinity;
                                                         }
 
-                                                        if ((b.match( /\./g ) || [] ).length === 0) {
+                                                        if (!b.includes(".")) {
                                                             bType = 0;
                                                         } else if (b === ".") {
                                                             bType = 1;
