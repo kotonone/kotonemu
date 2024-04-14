@@ -663,13 +663,13 @@ There is NO WARRANTY, to the extent permitted by law.
                                             directories.push("./");
                                         }
                                         const getFileList = (dir: string) => {
-                                            let fileList = this.readdir(dir);
+                                            let files = this.readdir(dir);
                                             if (options.index["-A"] < options.index["-a"]) {
-                                                fileList = [".", "..", ...fileList];
+                                                files = [".", "..", ...files];
                                             }
                                             if (options.index["-U"] === -1) {
                                                 if (options.index["-X"] !== -1) {
-                                                    fileList.sort((a, b) => {
+                                                    files.sort((a, b) => {
                                                         let aType = -1;
                                                         let bType = -1;
                                                         if (!a.includes(".")) {
@@ -711,14 +711,14 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         }
                                                     });
                                                 } else {
-                                                    fileList.sort();
+                                                    files.sort();
                                                 }
                                             }
                                             if (options.index["-r"] !== -1) {
-                                                fileList.reverse();
+                                                files.reverse();
                                             }
-                                            const returnDataList = [];
-                                            for (const fileName of fileList) {
+                                            const fileList = [];
+                                            for (const fileName of files) {
                                                 let fileData = fileName;
                                                 if (options.index["-A"] === -1 && options.index["-a"] === -1) {
                                                     if (fileName.startsWith(".")) {
@@ -736,17 +736,17 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     }
                                                 }
                                                 if (options.index["-Q"] === -1){
-                                                    returnDataList.push(fileData);
+                                                    fileList.push(fileData);
                                                 } else {
-                                                    returnDataList.push(`"${fileData}"`);
+                                                    fileList.push(`"${fileData}"`);
                                                 }
                                             }
                                             if (options.index["-1"] === -1 && options.index["-m"] === -1) {
-                                                return returnDataList.join("  ");
+                                                return fileList.join("  ");
                                             } else if (options.index["-1"] < options.index["-m"]) {
-                                                return returnDataList.join(", ");
+                                                return fileList.join(", ");
                                             } else {
-                                                return returnDataList.join("\n");
+                                                return fileList.join("\n");
                                             }
                                         }
                                         if (directories.length === 1) {
