@@ -727,7 +727,6 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 }
                                                 if (options.index["-F"] !== -1) {
                                                     const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
-                                                    // TODO: executable-file
                                                     if (stat.mode & StatMode.IFDIR) {
                                                         fileData += "/";
                                                     } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
@@ -753,7 +752,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         if (directories.length === 1) {
                                             try {
                                                 lib.io.write(getFileList(directories[0]), 1);
-                                            } catch (e){
+                                            } catch (e) {
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
                                                 } else if (e instanceof ENOTDIR) {
@@ -765,7 +764,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         } else {
                                             const list = [];
                                             for (let i = 0; i < directories.length; i++) {
-                                                const directoryPath = directories[i]
+                                                const directoryPath = directories[i];
                                                 try {
                                                     list.push(`${directoryPath}:\n${getFileList(directoryPath)}`);
                                                 } catch (e){
