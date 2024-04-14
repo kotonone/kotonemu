@@ -4,6 +4,7 @@ import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
 import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
 import { File } from "@/core/File";
+import { Stat } from "@/core/Process";
 
 /** ShalfeltOS を生成します。 */
 export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: File[] } {
@@ -584,88 +585,204 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q"],
-                                        [],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X"],
+                                        [
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", 
+                                            { "id": "--sort", "usesArgument": true, "needsArgument": true}
+                                        ],
                                         { stopInvalidOption: false }
                                     );
-                                    let directories = options.arguments;
-                                    if (directories.length === 0) {
-                                        directories.push("./");
-                                    }
-                                    const getFileList = (dir: string) => {
-                                        let fileList = this.readdir(dir);
-                                        if (options.index["-A"] < options.index["-a"]) {
-                                            fileList = [".", "..", ...fileList];
-                                        }
-                                        fileList.sort();
-                                        if (options.index["-r"] !== -1) {
-                                            fileList.reverse();
-                                        }
-                                        const returnDataList = [];
-                                        for (const fileName of fileList) {
-                                            let fileData = fileName;
-                                            if (options.index["-A"] === -1 && options.index["-a"] === -1) {
-                                                if (fileName.startsWith(".")) {
-                                                    continue;
-                                                }
-                                            }
-                                            if (options.index["-F"] !== -1) {
-                                                const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
-                                                // TODO: executable-file
-                                                if (stat.mode & StatMode.IFDIR) {
-                                                    fileData += "/";
-                                                } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
-                                                    fileData += "@";
-                                                } else if (stat.mode & 0o100) {
-                                                    fileData += "*";
-                                                }
-                                            }
-                                            if (options.index["-Q"] === -1){
-                                                returnDataList.push(fileData);
-                                            } else {
-                                                returnDataList.push(`"${fileData}"`);
-                                            }
-                                        }
-                                        if (options.index["-1"] === -1 && options.index["-m"] === -1) {
-                                            return returnDataList.join("  ");
-                                        } else if (options.index["-1"] < options.index["-m"]) {
-                                            return returnDataList.join(", ");
-                                        } else {
-                                            return returnDataList.join("\n");
-                                        }
-                                    }
-                                    if (directories.length === 1) {
-                                        try {
-                                            lib.io.write(getFileList(directories[0]), 1);
-                                        } catch (e){
-                                            if (e instanceof ENOENT) {
-                                                lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
-                                            } else if (e instanceof ENOTDIR) {
-                                                lib.io.write(directories[0], 1);
-                                            } else {
-                                                throw e;
-                                            }
-                                        }
+                                    if (options.index["--help"] !== -1) {
+                                        lib.io.write(
+`使用法: ls [オプション]... [ファイル]...
+ファイル (既定ではカレントディレクトリ) に関する情報を一覧表示します。
+--sortが指定されていない場合は、エントリをアルファベット順に並び替えます
+
+  -A, --all                  . で始まる要素を無視しない
+  -A, --almost-all           . 及び .. を一覧表示しない 
+  -F, --classify             要素にインジケータ（*/@のいずれか）を追加する
+  -m                         要素のリストをカンマで区切る
+  -Q, --quote-name           要素名をダブルクオーテーションで囲む
+  -r, --reverse              並び順を反転させる
+      --sort=WORD            名前の代わりに WORD にしたがって並び替える:
+                               none (-U), extension (-X)
+  -U                         要素を並び替えない
+  -X                         要素の拡張子でアルファベット順にソートする
+  -1                         1行に1ファイルをリストする。
+                               また、-q 及び -b で ' \\n' を変換しない。
+      --help     この使い方を表示して終了する
+      --version  バージョン情報を表示して終了する
+
+`, 1);
+                                    } else if (options.index["--version"] !== -1) {
+                                        lib.io.write(
+`ls (ShalfeltOS Coreutils) 1.0.0
+Copyright (c) 2024 Kotonone and ShalfeltOS contributors
+MIT License: https://opensource.org/license/mit.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+作者 Kotonone and ShalfeltOS contributors
+`, 1);
                                     } else {
-                                        const list = [];
-                                        for (let i = 0; i < directories.length; i++) {
-                                            const directoryPath = directories[i]
+                                        if (options.index["--all"] !== -1) {
+                                            options.index["-a"] = Math.max(options.index["--all"], options.index["-a"])
+                                            delete options.index["--all"];
+                                        }
+                                        if (options.index["--almost-all"] !== -1) {
+                                            options.index["-A"] = Math.max(options.index["--almost-all"], options.index["-A"])
+                                            delete options.index["--almost-all"];
+                                        }
+                                        if (options.index["--classify"] !== -1) {
+                                            options.index["-F"] = Math.max(options.index["--classify"], options.index["-F"])
+                                            delete options.index["--classify"];
+                                        }
+                                        if (options.index["--quote-name"] !== -1) {
+                                            options.index["-Q"] = Math.max(options.index["--quote-name"], options.index["-Q"])
+                                            delete options.index["--quote-name"];
+                                        }
+                                        if (options.index["--reverse"] !== -1) {
+                                            options.index["-r"] = Math.max(options.index["--reverse"], options.index["-r"])
+                                            delete options.index["--reverse"];
+                                        }
+                                        if (options.index["--sort"] !== -1) {
+                                            console.log(options.optionsArguments["--sort"])
+                                            switch (options.optionsArguments["--sort"]) {
+                                                case "none":
+                                                    options.index["-U"] = Math.max(options.index["--sort"], options.index["-U"])
+                                                    break;
+                                                case "extension":
+                                                    options.index["-X"] = Math.max(options.index["--sort"], options.index["-X"])
+                                                    break;
+                                            }
+                                            delete options.index["--sort"];
+                                        }
+    
+                                        let directories = options.arguments;
+                                        if (directories.length === 0) {
+                                            directories.push("./");
+                                        }
+                                        const getFileList = (dir: string) => {
+                                            let fileList = this.readdir(dir);
+                                            if (options.index["-A"] < options.index["-a"]) {
+                                                fileList = [".", "..", ...fileList];
+                                            }
+                                            if (options.index["-U"] === -1) {
+                                                if (options.index["-X"] !== -1) {
+                                                    fileList.sort((a, b) => {
+                                                        let aType = -1;
+                                                        let bType = -1;
+                                                        if ((a.match( /\./g ) || [] ).length === 0) {
+                                                            aType = 0;
+                                                        } else if (a === ".") {
+                                                            aType = 1;
+                                                        } else if (a === ".."){
+                                                            aType = 2;
+                                                        } else if (a.startsWith(".") && a.slice(1).includes(".")){
+                                                            aType = 3;
+                                                        } else {
+                                                            aType = Infinity;
+                                                        }
+
+                                                        if ((b.match( /\./g ) || [] ).length === 0) {
+                                                            bType = 0;
+                                                        } else if (b === ".") {
+                                                            bType = 1;
+                                                        } else if (b === ".."){
+                                                            bType = 2;
+                                                        } else if (b.startsWith(".") && b.slice(1).includes(".")){
+                                                            bType = 3;
+                                                        } else {
+                                                            bType = Infinity;
+                                                        }
+
+                                                        if (aType < bType) {
+                                                            return -1;
+                                                        } else if (aType > bType) {
+                                                            return 1;
+                                                        } else {
+                                                            const aExt = a.split(".").slice(-1)[0];
+                                                            const bExt = b.split(".").slice(-1)[0];
+                                                            if (aExt === bExt) {
+                                                                return a.localeCompare(b);
+                                                            } else {
+                                                                return aExt.localeCompare(bExt);
+                                                            }
+                                                        }
+                                                    });
+                                                } else {
+                                                    fileList.sort();
+                                                }
+                                            }
+                                            if (options.index["-r"] !== -1) {
+                                                fileList.reverse();
+                                            }
+                                            const returnDataList = [];
+                                            for (const fileName of fileList) {
+                                                let fileData = fileName;
+                                                if (options.index["-A"] === -1 && options.index["-a"] === -1) {
+                                                    if (fileName.startsWith(".")) {
+                                                        continue;
+                                                    }
+                                                }
+                                                if (options.index["-F"] !== -1) {
+                                                    const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
+                                                    // TODO: executable-file
+                                                    if (stat.mode & StatMode.IFDIR) {
+                                                        fileData += "/";
+                                                    } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
+                                                        fileData += "@";
+                                                    } else if (stat.mode & 0o100) {
+                                                        fileData += "*";
+                                                    }
+                                                }
+                                                if (options.index["-Q"] === -1){
+                                                    returnDataList.push(fileData);
+                                                } else {
+                                                    returnDataList.push(`"${fileData}"`);
+                                                }
+                                            }
+                                            if (options.index["-1"] === -1 && options.index["-m"] === -1) {
+                                                return returnDataList.join("  ");
+                                            } else if (options.index["-1"] < options.index["-m"]) {
+                                                return returnDataList.join(", ");
+                                            } else {
+                                                return returnDataList.join("\n");
+                                            }
+                                        }
+                                        if (directories.length === 1) {
                                             try {
-                                                list.push(`${directoryPath}:\n${getFileList(directoryPath)}`);
+                                                lib.io.write(getFileList(directories[0]), 1);
                                             } catch (e){
                                                 if (e instanceof ENOENT) {
-                                                    lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
-                                                    return;
+                                                    lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
                                                 } else if (e instanceof ENOTDIR) {
-                                                    list.push(directoryPath);
+                                                    lib.io.write(directories[0], 1);
                                                 } else {
                                                     throw e;
                                                 }
                                             }
+                                        } else {
+                                            const list = [];
+                                            for (let i = 0; i < directories.length; i++) {
+                                                const directoryPath = directories[i]
+                                                try {
+                                                    list.push(`${directoryPath}:\n${getFileList(directoryPath)}`);
+                                                } catch (e){
+                                                    if (e instanceof ENOENT) {
+                                                        lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
+                                                        return;
+                                                    } else if (e instanceof ENOTDIR) {
+                                                        list.push(directoryPath);
+                                                    } else {
+                                                        throw e;
+                                                    }
+                                                }
+                                            }
+                                            lib.io.write(list.join("\n\n"), 1);
                                         }
-                                        lib.io.write(list.join("\n\n"), 1);
+                                        lib.io.write("\n", 1);
                                     }
-                                    lib.io.write("\n", 1);
                                 }
                             },
                         ]
