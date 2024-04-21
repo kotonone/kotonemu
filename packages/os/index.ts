@@ -585,10 +585,11 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t"],
                                         [
-                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", 
-                                            { "id": "--sort", "usesArgument": true, "needsArgument": true}
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal",
+                                            { "id": "--sort", "usesArgument": true, "needsArgument": true},
+                                            { "id": "--quoting-style", "usesArgument": true, "needsArgument": true}
                                         ],
                                         { stopInvalidOption: false }
                                     );
@@ -596,17 +597,27 @@ There is NO WARRANTY, to the extent permitted by law.
                                         lib.io.write(
 `使用法: ls [オプション]... [ファイル]...
 ファイル (既定ではカレントディレクトリ) に関する情報を一覧表示します。
---sortが指定されていない場合は、エントリをアルファベット順に並び替えます
+--sortが指定されていない場合は、要素をアルファベット順に並び替えます
 
-  -A, --all                  . で始まる要素を無視しない
-  -A, --almost-all           . 及び .. を一覧表示しない 
+  -a, --all                  . で始まる要素を無視しない
+  -A, --almost-all           . 及び .. を一覧表示しない
+  -b, --escape               表示不可能な文字の場合に C 形式のエスケープ文字で表示する
   -F, --classify             要素にインジケータ（*/@のいずれか）を追加する
   -m                         要素のリストをカンマで区切る
+  -N, --literal              要素名をそのまま表示する
+  -q, --hide-control-chars   表示不可能な文字を ? で表示する
+      --show-control-chars   表示不可能な文字をそのまま表示する
   -Q, --quote-name           要素名をダブルクオーテーションで囲む
+      --quoting-style=WORD   WORD のスタイルで要素名を表示する:
+                               literal, locale, shell, shell-always,
+                               shell-escape, shell-escape-always, c, escape
   -r, --reverse              並び順を反転させる
+  -S                         sort by file size, largest first
       --sort=WORD            名前の代わりに WORD にしたがって並び替える:
                                none (-U), extension (-X)
+  -t                         ファイルの更新時間で新しい順に並び替える
   -U                         要素を並び替えない
+  -v                         natural sort of (version) numbers within text
   -X                         要素の拡張子でアルファベット順にソートする
   -1                         1行に1ファイルをリストする。
                                また、-q 及び -b で ' \\n' を変換しない。
@@ -625,6 +636,10 @@ There is NO WARRANTY, to the extent permitted by law.
 作者 Kotonone and ShalfeltOS contributors
 `, 1);
                                     } else {
+                                        let quotingStyle = "literal";
+                                        let quotingStyleIndex = -1;
+                                        let sortType = "";
+                                        let sortTypeIndex = -1
                                         if (options.index["--all"] !== -1) {
                                             options.index["-a"] = Math.max(options.index["--all"], options.index["-a"])
                                             delete options.index["--all"];
@@ -637,25 +652,165 @@ There is NO WARRANTY, to the extent permitted by law.
                                             options.index["-F"] = Math.max(options.index["--classify"], options.index["-F"])
                                             delete options.index["--classify"];
                                         }
-                                        if (options.index["--quote-name"] !== -1) {
-                                            options.index["-Q"] = Math.max(options.index["--quote-name"], options.index["-Q"])
-                                            delete options.index["--quote-name"];
-                                        }
                                         if (options.index["--reverse"] !== -1) {
                                             options.index["-r"] = Math.max(options.index["--reverse"], options.index["-r"])
                                             delete options.index["--reverse"];
                                         }
+
+                                        if (options.index["-U"] !== -1) {
+                                            if (options.index["-U"] >= sortTypeIndex) {
+                                                sortType = "none";
+                                                sortTypeIndex = options.index["-U"];
+                                            }
+                                            delete options.index["-U"];
+                                        }
+                                        if (options.index["-X"] !== -1) {
+                                            if (options.index["-X"] >= sortTypeIndex) {
+                                                sortType = "extension";
+                                                sortTypeIndex = options.index["-X"];
+                                            }
+                                            delete options.index["-X"];
+                                        }
+                                        if (options.index["-t"] !== -1) {
+                                            if (options.index["-t"] >= sortTypeIndex) {
+                                                sortType = "time";
+                                                sortTypeIndex = options.index["-t"];
+                                            }
+                                            delete options.index["-t"];
+                                        }
+                                        if (options.index["-v"] !== -1) {
+                                            if (options.index["-v"] >= sortTypeIndex) {
+                                                sortType = "version";
+                                                sortTypeIndex = options.index["-v"];
+                                            }
+                                            delete options.index["-v"];
+                                        }
+                                        if (options.index["-S"] !== -1) {
+                                            if (options.index["-S"] >= sortTypeIndex) {
+                                                sortType = "size";
+                                                sortTypeIndex = options.index["-S"];
+                                            }
+                                            delete options.index["-S"];
+                                        }
                                         if (options.index["--sort"] !== -1) {
-                                            console.log(options.optionsArguments["--sort"])
                                             switch (options.optionsArguments["--sort"]) {
                                                 case "none":
-                                                    options.index["-U"] = Math.max(options.index["--sort"], options.index["-U"])
-                                                    break;
                                                 case "extension":
-                                                    options.index["-X"] = Math.max(options.index["--sort"], options.index["-X"])
+                                                case "time":
+                                                case "extensizesion":
+                                                case "version":
+                                                    if (options.index["--sort"] >= sortTypeIndex){
+                                                        sortType = options.optionsArguments["--sort"];
+                                                        sortTypeIndex = options.index["--sort"]
+                                                    }
+                                                    delete options.index["--sort"];
                                                     break;
+                                                case "":
+                                                case undefined:
+                                                    lib.io.write(`ls: '--sort' は引数が必要です
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
+                                                default:
+                                                    lib.io.write(`ls: '--sort' に対する引数 '${options.optionsArguments["--sort"]}' が間違っています
+有効な引数:
+  - 'none'
+  - 'time'
+  - 'size'
+  - 'extension'
+  - 'version'
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
                                             }
-                                            delete options.index["--sort"];
+                                        }
+                                        if (options.index["-q"] !== -1) {
+                                            options.index["--hide-control-chars"] = Math.max(options.index["--hide-control-chars"], options.index["-q"])
+                                            delete options.index["-q"];
+                                        }
+                                        if (options.index["-b"] !== -1) {
+                                            if (options.index["-b"] >= quotingStyleIndex) {
+                                                quotingStyle = "escape";
+                                                quotingStyleIndex = options.index["-b"];
+                                            }
+                                            delete options.index["-b"];
+                                        }
+                                        if (options.index["--escape"] !== -1) {
+                                            if (options.index["--escape"] >= quotingStyleIndex) {
+                                                quotingStyle = "escape";
+                                                quotingStyleIndex = options.index["--escape"];
+                                            }
+                                            delete options.index["--escape"];
+                                        }
+                                        if (options.index["--quote-name"] !== -1) {
+                                            if (options.index["--quote-name"] >= quotingStyleIndex) {
+                                                quotingStyle = "c";
+                                                quotingStyleIndex = options.index["--quote-name"];
+                                            }
+                                            delete options.index["--quote-name"];
+                                        }
+                                        if (options.index["-Q"] !== -1) {
+                                            if (options.index["-Q"] >= quotingStyleIndex) {
+                                                quotingStyle = "c";
+                                                quotingStyleIndex = options.index["-Q"];
+                                            }
+                                            delete options.index["-Q"];
+                                        }
+                                        if (options.index["--literal"] !== -1) {
+                                            if (options.index["--literal"] >= quotingStyleIndex) {
+                                                quotingStyle = "literal";
+                                                quotingStyleIndex = options.index["--literal"];
+                                            }
+                                            delete options.index["--literal"];
+                                        }
+                                        if (options.index["-N"] !== -1) {
+                                            if (options.index["-N"] >= quotingStyleIndex) {
+                                                quotingStyle = "literal";
+                                                quotingStyleIndex = options.index["-N"];
+                                            }
+                                            delete options.index["-N"];
+                                        }
+                                        if (options.index["--quoting-style"] !== -1) {
+                                            switch (options.optionsArguments["--quoting-style"]) {
+                                                case "literal":
+                                                case "shell":
+                                                case "shell-always":
+                                                case 'shell-escape':
+                                                case 'shell-escape-always':
+                                                case 'c':
+                                                case 'c-maybe':
+                                                case 'escape':
+                                                case 'locale':
+                                                case 'clocale':
+                                                    if (options.index["--quoting-style"] >= sortTypeIndex){
+                                                        quotingStyle = options.optionsArguments["--quoting-style"];
+                                                        sortTypeIndex = options.index["--quoting-style"]
+                                                    }
+                                                    delete options.index["--quoting-style"];
+                                                    break;
+                                                case "":
+                                                case undefined:
+                                                    lib.io.write(`ls: '--quoting-style' は引数が必要です
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
+                                                default:
+                                                    lib.io.write(`ls: '--quoting-style' に対する引数 '${options.optionsArguments["--quoting-style"]}' が間違っています
+有効な引数:
+  - 'literal'
+  - 'shell'
+  - 'shell-always'
+  - 'shell-escape'
+  - 'shell-escape-always'
+  - 'c'
+  - 'c-maybe'
+  - 'escape'
+  - 'locale'
+  - 'clocale'
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
+                                            }
                                         }
     
                                         let directories = options.arguments;
@@ -667,8 +822,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                             if (options.index["-A"] < options.index["-a"]) {
                                                 files = [".", "..", ...files];
                                             }
-                                            if (options.index["-U"] === -1) {
-                                                if (options.index["-X"] !== -1) {
+                                            // TODO: size, version, time
+                                            if (sortType !== "none") {
+                                                if (sortType === "extension") {
                                                     files.sort((a, b) => {
                                                         let aType = -1;
                                                         let bType = -1;
@@ -676,9 +832,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                             aType = 0;
                                                         } else if (a === ".") {
                                                             aType = 1;
-                                                        } else if (a === ".."){
+                                                        } else if (a === "..") {
                                                             aType = 2;
-                                                        } else if (a.startsWith(".") && a.slice(1).includes(".")){
+                                                        } else if (a.startsWith(".") && a.slice(1).includes(".")) {
                                                             aType = 3;
                                                         } else {
                                                             aType = Infinity;
@@ -688,9 +844,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                             bType = 0;
                                                         } else if (b === ".") {
                                                             bType = 1;
-                                                        } else if (b === ".."){
+                                                        } else if (b === "..") {
                                                             bType = 2;
-                                                        } else if (b.startsWith(".") && b.slice(1).includes(".")){
+                                                        } else if (b.startsWith(".") && b.slice(1).includes(".")) {
                                                             bType = 3;
                                                         } else {
                                                             bType = Infinity;
@@ -735,12 +891,99 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         fileData += "*";
                                                     }
                                                 }
-                                                if (options.index["-Q"] === -1){
-                                                    fileList.push(fileData);
-                                                } else {
-                                                    fileList.push(`"${fileData}"`);
+
+                                                const escapeFileData = () => {
+                                                    const caret: { [key: string]: string } = {
+                                                        "\x00":"\\0",
+                                                        "\x01":"\\001",
+                                                        "\x02":"\\002",
+                                                        "\x03":"\\003",
+                                                        "\x04":"\\004",
+                                                        "\x05":"\\005",
+                                                        "\x06":"\\006",
+                                                        "\x07":"\\a",
+                                                        "\x08":"\\b",
+                                                        "\x09":"\\t",
+                                                        "\x0b":"\\v",
+                                                        "\x0c":"\\f",
+                                                        "\x0d":"\\r",
+                                                        "\x0e":"\\016",
+                                                        "\x0f":"\\017",
+                                                        "\x10":"\\020",
+                                                        "\x11":"\\021",
+                                                        "\x12":"\\022",
+                                                        "\x13":"\\023",
+                                                        "\x14":"\\024",
+                                                        "\x15":"\\025",
+                                                        "\x16":"\\026",
+                                                        "\x17":"\\027",
+                                                        "\x18":"\\030",
+                                                        "\x19":"\\031",
+                                                        "\x1a":"\\032",
+                                                        "\x1b":"\\033",
+                                                        "\x1c":"\\034",
+                                                        "\x1d":"\\035",
+                                                        "\x1e":"\\036",
+                                                        "\x1f":"\\037",
+                                                        "\x7f":"\\177"
+                                                    };
+                                                    fileData = fileData.replace(
+                                                        /[\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f]/g,
+                                                        s => caret[s]
+                                                    );
+                                                    if (options.index["-1"] === -1) {
+                                                        fileData = fileData.replaceAll("\x0a","\\n");
+                                                    }
+                                                };
+
+                                                // TODO: locale & clocale
+                                                if (quotingStyle === "escape") {
+                                                    fileData.replaceAll(" ", e => "\\ ");
+                                                    escapeFileData()
+                                                } else if (quotingStyle === "c") {
+                                                    fileData.replace(/[\\\"]/g, e => "\\" + e);
+                                                    fileData = `"${fileData}"`;
+                                                    escapeFileData();
+                                                } else if (quotingStyle === "c-maybe") {
+                                                    if (fileData.includes("\"")) {
+                                                        fileData.replaceAll("\"", "\\\"");
+                                                        fileData = `"${fileData}"`;
+                                                    } else if (/[\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f]/.test(fileData) || (options.index["-1"] === -1 && fileData.includes("\x0a"))) {
+                                                        fileData = `"${fileData}"`;
+                                                    }
+                                                    escapeFileData();
+                                                } else if (quotingStyle === "shell" || quotingStyle === "shell-always" || quotingStyle === "shell-escape" || quotingStyle === "shell-escape-always") {
+                                                    if (quotingStyle === "shell-escape" || quotingStyle === "shell-escape-always" ) escapeFileData();
+                                                    const specialCharacters = /[\,\[\\\*\^\$\(\)\+\?\{\|]/g;
+                                                    if (specialCharacters.test(fileData)){
+                                                        if (fileData.includes("'")) {
+                                                            if (fileData.includes("\"")) {
+                                                                fileData = `'${fileData.replaceAll("'","\\'")}'`;
+                                                            } else {
+                                                                fileData = `"${fileData.replace(/[\`\$\\]/g, e => "\\" + e)}'}"`;
+                                                            }
+                                                        } else {
+                                                            fileData = `'${fileData}'`;
+                                                        }
+                                                    } else if (quotingStyle === "shell-always" || quotingStyle === "shell-escape-always") {
+                                                        fileData = `'${fileData}'`;
+                                                    }
                                                 }
+
+                                                // TODO: change default if output is not a terminal
+                                                if (options.index["--hide-control-chars"] >= options.index["--show-control-chars"]){
+                                                    fileData = fileData.replace(
+                                                        /[\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x7f]/g,
+                                                        "?"
+                                                    );
+                                                    if (options.index["-1"] === -1) {
+                                                        fileData = fileData.replaceAll("\x0a","?");
+                                                    }
+                                                }
+
+                                                fileList.push(fileData);
                                             }
+
                                             if (options.index["-1"] === -1 && options.index["-m"] === -1) {
                                                 return fileList.join("  ");
                                             } else if (options.index["-1"] < options.index["-m"]) {
