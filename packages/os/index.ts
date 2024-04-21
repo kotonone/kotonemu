@@ -377,7 +377,7 @@ ankosoba`)
 
                                     if (options.invalidOption) {
                                         lib.io.write(`cat: 無効なオプション -- ${options.invalidOption}\n`, 2);
-                                        lib.io.write(`Try 'cat --help' for more information.\n`, 2);
+                                        lib.io.write(`詳しくは'cat --help'を実行してください\n`, 2);
                                     }
                                     else {
                                         // TODO: Add options
@@ -612,12 +612,12 @@ There is NO WARRANTY, to the extent permitted by law.
                                literal, locale, shell, shell-always,
                                shell-escape, shell-escape-always, c, escape
   -r, --reverse              並び順を反転させる
-  -S                         sort by file size, largest first
+  -S                         ファイルのサイズで大きい順に並び替える
       --sort=WORD            名前の代わりに WORD にしたがって並び替える:
                                none (-U), extension (-X)
   -t                         ファイルの更新時間で新しい順に並び替える
   -U                         要素を並び替えない
-  -v                         natural sort of (version) numbers within text
+  -v                         テキスト内の(バージョン)番号で自然に並び替える
   -X                         要素の拡張子でアルファベット順にソートする
   -1                         1行に1ファイルをリストする。
                                また、-q 及び -b で ' \\n' を変換しない。
