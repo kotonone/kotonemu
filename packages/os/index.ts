@@ -82,6 +82,15 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                 deleted: false,
                 children: [
                     {
+                        name: "mnt",
+                        type: "directory",
+                        owner: 0,
+                        group: 0,
+                        mode: 0o777,
+                        deleted: false,
+                        children: []
+                    },
+                    {
                         name: "hello.txt",
                         type: "regular-file",
                         owner: 0,
@@ -188,6 +197,15 @@ ankosoba`)
                         deleted: false,
                         children: [
                             {
+                                name: "root",
+                                type: "symlink",
+                                owner: 0,
+                                group: 0,
+                                mode: 0o777,
+                                deleted: false,
+                                target: "/root"
+                            },
+                            {
                                 name: "login",
                                 type: "executable-file",
                                 owner: 0,
@@ -284,7 +302,27 @@ ankosoba`)
                                                     if (options.index["-P"] <= options.index["-L"]) {
                                                         lib.io.write(this.env.PWD + "\n", 1);
                                                     } else {
-                                                        lib.io.write(this.env.PWD + "\n", 1); // TODO: -P option
+                                                        if (this.env.PWD === "/") {
+                                                            lib.io.write("/\n", 1);
+                                                        } else {
+                                                            const pwdPath = this.env.PWD.split("/");
+                                                            let isSymbolic = false;
+                                                            for (let i = 0; i < pwdPath.length - 1; i++) {
+                                                                isSymbolic = !!(this.lstat(pwdPath.slice(0, -i ? -i : pwdPath.length).join("/")).mode & StatMode.IFLNK);
+                                                                if (isSymbolic) {
+                                                                    if (i === 0) {
+                                                                        lib.io.write(this.readlink(this.env.PWD) + "\n", 1);
+                                                                    } else {
+                                                                        lib.io.write(this.readlink(pwdPath.slice(0, -i).join("/")) + "/" + pwdPath.slice(-i).join("/") + "\n", 1);
+                                                                    }
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!isSymbolic) {
+                                                                lib.io.write(this.env.PWD + "\n", 1);
+                                                            }
+                                                        }
+
                                                     }
                                                 }
                                             }
