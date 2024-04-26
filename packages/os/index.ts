@@ -82,15 +82,6 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
                 deleted: false,
                 children: [
                     {
-                        name: "mnt",
-                        type: "directory",
-                        owner: 0,
-                        group: 0,
-                        mode: 0o777,
-                        deleted: false,
-                        children: []
-                    },
-                    {
                         name: "hello.txt",
                         type: "regular-file",
                         owner: 0,
@@ -196,15 +187,6 @@ ankosoba`)
                         mode: 0o777,
                         deleted: false,
                         children: [
-                            {
-                                name: "root",
-                                type: "symlink",
-                                owner: 0,
-                                group: 0,
-                                mode: 0o777,
-                                deleted: false,
-                                target: "/root"
-                            },
                             {
                                 name: "login",
                                 type: "executable-file",
