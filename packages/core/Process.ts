@@ -1,5 +1,5 @@
 import { Emulator, EmulatorInfo } from "./Emulator";
-import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD } from "./Error";
+import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
 import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
 import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
@@ -431,6 +431,18 @@ export class Process {
             deleted: false,
             target
         });
+    }
+    /**
+     * シンボリックリンク pathname のリンク先を参照します。
+     * @param pathname パス名
+     */
+    public readlink(pathname: string): string {
+        const entry = this._getEntryFromPathname(pathname);
+        if (isSymbolicLink(entry)) {
+            return entry.target;
+        } else {
+            throw new EINVAL();
+        }
     }
 
     /**

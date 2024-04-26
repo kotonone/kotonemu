@@ -78,3 +78,11 @@ export class EBADFD extends OSError {
         this.message = "Invalid file descriptor";
     }
 }
+
+/** 引数が異常であるエラー */
+export class EINVAL extends OSError {
+    constructor() {
+        super();
+        this.message = "Invalid argument";
+    }
+}
