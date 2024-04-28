@@ -605,9 +605,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R"],
                                         [
-                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type",
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive",
                                             { "id": "--sort", "usesArgument": true, "needsArgument": true},
                                             { "id": "--quoting-style", "usesArgument": true, "needsArgument": true},
                                             { "id": "--indicator-style", "usesArgument": true, "needsArgument": true}
@@ -673,6 +673,10 @@ There is NO WARRANTY, to the extent permitted by law.
                                         if (options.index["--almost-all"] !== -1) {
                                             options.index["-A"] = Math.max(options.index["--almost-all"], options.index["-A"])
                                             delete options.index["--almost-all"];
+                                        }
+                                        if (options.index["--recursive"] !== -1) {
+                                            options.index["-R"] = Math.max(options.index["--recursive"], options.index["-R"])
+                                            delete options.index["--recursive"];
                                         }
                                         if (options.index["--reverse"] !== -1) {
                                             options.index["-r"] = Math.max(options.index["--reverse"], options.index["-r"])
@@ -955,6 +959,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 files.reverse();
                                             }
                                             const fileList = [];
+                                            const stats: {[key: string]: Stat} = {};
                                             for (const fileName of files) {
                                                 let fileData = fileName;
                                                 if (options.index["-A"] === -1 && options.index["-a"] === -1) {
@@ -962,16 +967,21 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         continue;
                                                     }
                                                 }
+                                                stats[fileName] = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`)
+                                                if (options.index["-R"] !== -1) {
+                                                    if (stats[fileName].mode & StatMode.IFDIR) {
+                                                        directories.push(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
+                                                        directories.sort();
+                                                    } 
+                                                }
                                                 if (indicatorType.type !== "none") {
-                                                    const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
-                                                    console.log(indicatorType.type)
-                                                    if (stat.mode & StatMode.IFDIR) {
+                                                    if (stats[fileName].mode & StatMode.IFDIR) {
                                                         fileData += "/";
-                                                    } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
+                                                    } else if (stats[fileName].mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
                                                         if (indicatorType.type !== "slash") {
                                                             fileData += "@";
                                                         }
-                                                    } else if (stat.mode & 0o100) {
+                                                    } else if (stats[fileName].mode & 0o100) {
                                                         if (indicatorType.type === "classify") {
                                                             fileData += "*";
                                                         }
@@ -1078,7 +1088,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 return fileList.join("\n");
                                             }
                                         }
-                                        if (directories.length === 1) {
+                                        if (directories.length === 1 && options.index["-R"] === -1) {
                                             try {
                                                 lib.io.write(getFileList(directories[0]), 1);
                                             } catch (e) {
@@ -1099,7 +1109,6 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 } catch (e){
                                                     if (e instanceof ENOENT) {
                                                         lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
-                                                        return;
                                                     } else if (e instanceof ENOTDIR) {
                                                         list.push(directoryPath);
                                                     } else {
