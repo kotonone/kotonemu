@@ -605,11 +605,12 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p"],
                                         [
-                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal",
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type",
                                             { "id": "--sort", "usesArgument": true, "needsArgument": true},
-                                            { "id": "--quoting-style", "usesArgument": true, "needsArgument": true}
+                                            { "id": "--quoting-style", "usesArgument": true, "needsArgument": true},
+                                            { "id": "--indicator-style", "usesArgument": true, "needsArgument": true}
                                         ],
                                         { stopInvalidOption: false }
                                     );
@@ -623,8 +624,11 @@ There is NO WARRANTY, to the extent permitted by law.
   -A, --almost-all           . 及び .. を一覧表示しない
   -b, --escape               表示不可能な文字の場合に C 形式のエスケープ文字で表示する
   -F, --classify             要素にインジケータ（*/@のいずれか）を追加する
+      --file-type            -Fと同じように追加するが、 '*' は付けない
   -m                         要素のリストをカンマで区切る
   -N, --literal              要素名をそのまま表示する
+  -p, --indicator-style=slash
+                             ディレクトリにインジケータ '*' を追加する
   -q, --hide-control-chars   表示不可能な文字を ? で表示する
       --show-control-chars   表示不可能な文字をそのまま表示する
   -Q, --quote-name           要素名をダブルクオーテーションで囲む
@@ -656,10 +660,9 @@ There is NO WARRANTY, to the extent permitted by law.
 作者 Kotonone and ShalfeltOS contributors
 `, 1);
                                     } else {
-                                        let quotingStyle = "literal";
-                                        let quotingStyleIndex = -1;
-                                        let sortType = "";
-                                        let sortTypeIndex = -1
+                                        const quotingType = { type: "literal", index: -1 };
+                                        const sortingType = { type: "", index: -1 };
+                                        const indicatorType = { type: "none", index: -1 };
                                         if (options.index["--all"] !== -1) {
                                             options.index["-a"] = Math.max(options.index["--all"], options.index["-a"])
                                             delete options.index["--all"];
@@ -668,47 +671,43 @@ There is NO WARRANTY, to the extent permitted by law.
                                             options.index["-A"] = Math.max(options.index["--almost-all"], options.index["-A"])
                                             delete options.index["--almost-all"];
                                         }
-                                        if (options.index["--classify"] !== -1) {
-                                            options.index["-F"] = Math.max(options.index["--classify"], options.index["-F"])
-                                            delete options.index["--classify"];
-                                        }
                                         if (options.index["--reverse"] !== -1) {
                                             options.index["-r"] = Math.max(options.index["--reverse"], options.index["-r"])
                                             delete options.index["--reverse"];
                                         }
 
                                         if (options.index["-U"] !== -1) {
-                                            if (options.index["-U"] >= sortTypeIndex) {
-                                                sortType = "none";
-                                                sortTypeIndex = options.index["-U"];
+                                            if (options.index["-U"] >= sortingType.index) {
+                                                sortingType.type = "none";
+                                                sortingType.index = options.index["-U"];
                                             }
                                             delete options.index["-U"];
                                         }
                                         if (options.index["-X"] !== -1) {
-                                            if (options.index["-X"] >= sortTypeIndex) {
-                                                sortType = "extension";
-                                                sortTypeIndex = options.index["-X"];
+                                            if (options.index["-X"] >= sortingType.index) {
+                                                sortingType.type = "extension";
+                                                sortingType.index = options.index["-X"];
                                             }
                                             delete options.index["-X"];
                                         }
                                         if (options.index["-t"] !== -1) {
-                                            if (options.index["-t"] >= sortTypeIndex) {
-                                                sortType = "time";
-                                                sortTypeIndex = options.index["-t"];
+                                            if (options.index["-t"] >= sortingType.index) {
+                                                sortingType.type = "time";
+                                                sortingType.index = options.index["-t"];
                                             }
                                             delete options.index["-t"];
                                         }
                                         if (options.index["-v"] !== -1) {
-                                            if (options.index["-v"] >= sortTypeIndex) {
-                                                sortType = "version";
-                                                sortTypeIndex = options.index["-v"];
+                                            if (options.index["-v"] >= sortingType.index) {
+                                                sortingType.type = "version";
+                                                sortingType.index = options.index["-v"];
                                             }
                                             delete options.index["-v"];
                                         }
                                         if (options.index["-S"] !== -1) {
-                                            if (options.index["-S"] >= sortTypeIndex) {
-                                                sortType = "size";
-                                                sortTypeIndex = options.index["-S"];
+                                            if (options.index["-S"] >= sortingType.index) {
+                                                sortingType.type = "size";
+                                                sortingType.index = options.index["-S"];
                                             }
                                             delete options.index["-S"];
                                         }
@@ -719,9 +718,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 case "time":
                                                 case "extensizesion":
                                                 case "version":
-                                                    if (options.index["--sort"] >= sortTypeIndex){
-                                                        sortType = options.optionsArguments["--sort"];
-                                                        sortTypeIndex = options.index["--sort"]
+                                                    if (options.index["--sort"] >= sortingType.index){
+                                                        sortingType.type = options.optionsArguments["--sort"];
+                                                        sortingType.index = options.index["--sort"]
                                                     }
                                                     delete options.index["--sort"];
                                                     break;
@@ -749,44 +748,44 @@ There is NO WARRANTY, to the extent permitted by law.
                                             delete options.index["-q"];
                                         }
                                         if (options.index["-b"] !== -1) {
-                                            if (options.index["-b"] >= quotingStyleIndex) {
-                                                quotingStyle = "escape";
-                                                quotingStyleIndex = options.index["-b"];
+                                            if (options.index["-b"] >= quotingType.index) {
+                                                quotingType.type = "escape";
+                                                quotingType.index = options.index["-b"];
                                             }
                                             delete options.index["-b"];
                                         }
                                         if (options.index["--escape"] !== -1) {
-                                            if (options.index["--escape"] >= quotingStyleIndex) {
-                                                quotingStyle = "escape";
-                                                quotingStyleIndex = options.index["--escape"];
+                                            if (options.index["--escape"] >= quotingType.index) {
+                                                quotingType.type = "escape";
+                                                quotingType.index = options.index["--escape"];
                                             }
                                             delete options.index["--escape"];
                                         }
                                         if (options.index["--quote-name"] !== -1) {
-                                            if (options.index["--quote-name"] >= quotingStyleIndex) {
-                                                quotingStyle = "c";
-                                                quotingStyleIndex = options.index["--quote-name"];
+                                            if (options.index["--quote-name"] >= quotingType.index) {
+                                                quotingType.type = "c";
+                                                quotingType.index = options.index["--quote-name"];
                                             }
                                             delete options.index["--quote-name"];
                                         }
                                         if (options.index["-Q"] !== -1) {
-                                            if (options.index["-Q"] >= quotingStyleIndex) {
-                                                quotingStyle = "c";
-                                                quotingStyleIndex = options.index["-Q"];
+                                            if (options.index["-Q"] >= quotingType.index) {
+                                                quotingType.type = "c";
+                                                quotingType.index = options.index["-Q"];
                                             }
                                             delete options.index["-Q"];
                                         }
                                         if (options.index["--literal"] !== -1) {
-                                            if (options.index["--literal"] >= quotingStyleIndex) {
-                                                quotingStyle = "literal";
-                                                quotingStyleIndex = options.index["--literal"];
+                                            if (options.index["--literal"] >= quotingType.index) {
+                                                quotingType.type = "literal";
+                                                quotingType.index = options.index["--literal"];
                                             }
                                             delete options.index["--literal"];
                                         }
                                         if (options.index["-N"] !== -1) {
-                                            if (options.index["-N"] >= quotingStyleIndex) {
-                                                quotingStyle = "literal";
-                                                quotingStyleIndex = options.index["-N"];
+                                            if (options.index["-N"] >= quotingType.index) {
+                                                quotingType.type = "literal";
+                                                quotingType.index = options.index["-N"];
                                             }
                                             delete options.index["-N"];
                                         }
@@ -802,9 +801,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 case 'escape':
                                                 case 'locale':
                                                 case 'clocale':
-                                                    if (options.index["--quoting-style"] >= sortTypeIndex){
-                                                        quotingStyle = options.optionsArguments["--quoting-style"];
-                                                        sortTypeIndex = options.index["--quoting-style"]
+                                                    if (options.index["--quoting-style"] >= sortingType.index){
+                                                        quotingType.type = options.optionsArguments["--quoting-style"];
+                                                        sortingType.index = options.index["--quoting-style"]
                                                     }
                                                     delete options.index["--quoting-style"];
                                                     break;
@@ -832,6 +831,65 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     return;
                                             }
                                         }
+
+                                        if (options.index["-F"] !== -1) {
+                                            if (options.index["-F"] >= indicatorType.index) {
+                                                indicatorType.type = "classify";
+                                                indicatorType.index = options.index["-F"];
+                                            }
+                                            delete options.index["-F"];
+                                        }
+                                        if (options.index["--classify"] !== -1) {
+                                            if (options.index["--classify"] >= indicatorType.index) {
+                                                indicatorType.type = "classify";
+                                                indicatorType.index = options.index["--classify"];
+                                            }
+                                            delete options.index["--classify"];
+                                        }
+                                        if (options.index["--file-type"] !== -1) {
+                                            if (options.index["--file-type"] >= indicatorType.index) {
+                                                indicatorType.type = "file-type";
+                                                indicatorType.index = options.index["--file-type"];
+                                            }
+                                            delete options.index["--file-type"];
+                                        }
+                                        if (options.index["-p"] !== -1) {
+                                            if (options.index["-p"] >= indicatorType.index) {
+                                                indicatorType.type = "slash";
+                                                indicatorType.index = options.index["-p"];
+                                            }
+                                            delete options.index["-p"];
+                                        }
+                                        if (options.index["--indicator-style"] !== -1) {
+                                            switch (options.optionsArguments["--indicator-style"]) {
+                                                case "none":
+                                                case "slash":
+                                                case "file-type":
+                                                case "classify":
+                                                    if (options.index["--indicator-style"] >= indicatorType.index){
+                                                        indicatorType.type = options.optionsArguments["--indicator-style"];
+                                                        indicatorType.index = options.index["--indicator-style"]
+                                                    }
+                                                    delete options.index["--indicator-style"];
+                                                    break;
+                                                case "":
+                                                case undefined:
+                                                    lib.io.write(`ls: '--indicator-style' は引数が必要です
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
+                                                default:
+                                                    lib.io.write(`ls: '--indicator-style' に対する引数 '${options.optionsArguments["--indicator-style"]}' が間違っています
+有効な引数:
+  - 'none'
+  - 'slash'
+  - 'file-type'
+  - 'classify'
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                    return;
+                                            }
+                                        }
     
                                         let directories = options.arguments;
                                         if (directories.length === 0) {
@@ -843,8 +901,8 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 files = [".", "..", ...files];
                                             }
                                             // TODO: size, version, time
-                                            if (sortType !== "none") {
-                                                if (sortType === "extension") {
+                                            if (sortingType.type !== "none") {
+                                                if (sortingType.type === "extension") {
                                                     files.sort((a, b) => {
                                                         let aType = -1;
                                                         let bType = -1;
@@ -901,14 +959,19 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         continue;
                                                     }
                                                 }
-                                                if (options.index["-F"] !== -1) {
+                                                if (indicatorType.type !== "none") {
                                                     const stat = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
+                                                    console.log(indicatorType.type)
                                                     if (stat.mode & StatMode.IFDIR) {
                                                         fileData += "/";
                                                     } else if (stat.mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
-                                                        fileData += "@";
+                                                        if (indicatorType.type !== "slash") {
+                                                            fileData += "@";
+                                                        }
                                                     } else if (stat.mode & 0o100) {
-                                                        fileData += "*";
+                                                        if (indicatorType.type === "classify") {
+                                                            fileData += "*";
+                                                        }
                                                     }
                                                 }
 
@@ -957,14 +1020,14 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 };
 
                                                 // TODO: locale & clocale
-                                                if (quotingStyle === "escape") {
+                                                if (quotingType.type === "escape") {
                                                     fileData.replaceAll(" ", e => "\\ ");
                                                     escapeFileData()
-                                                } else if (quotingStyle === "c") {
+                                                } else if (quotingType.type === "c") {
                                                     fileData.replace(/[\\\"]/g, e => "\\" + e);
                                                     fileData = `"${fileData}"`;
                                                     escapeFileData();
-                                                } else if (quotingStyle === "c-maybe") {
+                                                } else if (quotingType.type === "c-maybe") {
                                                     if (fileData.includes("\"")) {
                                                         fileData.replaceAll("\"", "\\\"");
                                                         fileData = `"${fileData}"`;
@@ -972,8 +1035,8 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         fileData = `"${fileData}"`;
                                                     }
                                                     escapeFileData();
-                                                } else if (quotingStyle === "shell" || quotingStyle === "shell-always" || quotingStyle === "shell-escape" || quotingStyle === "shell-escape-always") {
-                                                    if (quotingStyle === "shell-escape" || quotingStyle === "shell-escape-always" ) escapeFileData();
+                                                } else if (quotingType.type === "shell" || quotingType.type === "shell-always" || quotingType.type === "shell-escape" || quotingType.type === "shell-escape-always") {
+                                                    if (quotingType.type === "shell-escape" || quotingType.type === "shell-escape-always" ) escapeFileData();
                                                     const specialCharacters = /[\,\[\\\*\^\$\(\)\+\?\{\|]/g;
                                                     if (specialCharacters.test(fileData)){
                                                         if (fileData.includes("'")) {
@@ -985,7 +1048,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         } else {
                                                             fileData = `'${fileData}'`;
                                                         }
-                                                    } else if (quotingStyle === "shell-always" || quotingStyle === "shell-escape-always") {
+                                                    } else if (quotingType.type === "shell-always" || quotingType.type === "shell-escape-always") {
                                                         fileData = `'${fileData}'`;
                                                     }
                                                 }
