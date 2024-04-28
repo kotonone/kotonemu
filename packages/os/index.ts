@@ -624,11 +624,14 @@ There is NO WARRANTY, to the extent permitted by law.
   -A, --almost-all           . 及び .. を一覧表示しない
   -b, --escape               表示不可能な文字の場合に C 形式のエスケープ文字で表示する
   -F, --classify             要素にインジケータ（*/@のいずれか）を追加する
-      --file-type            -Fと同じように追加するが、 '*' は付けない
+      --file-type            -Fと同じように追加するが、 '*' は追加しない
+      --indicator-style=WORD
+                             WORDのインジケータを追加する:
+                               none, classify (-F),
+                               file-type (--file-type), slash (-p)
   -m                         要素のリストをカンマで区切る
   -N, --literal              要素名をそのまま表示する
-  -p, --indicator-style=slash
-                             ディレクトリにインジケータ '*' を追加する
+  -p                         ディレクトリにインジケータ '/' を追加する
   -q, --hide-control-chars   表示不可能な文字を ? で表示する
       --show-control-chars   表示不可能な文字をそのまま表示する
   -Q, --quote-name           要素名をダブルクオーテーションで囲む
