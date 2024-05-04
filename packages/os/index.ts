@@ -602,15 +602,16 @@ There is NO WARRANTY, to the extent permitted by law.
 
                                 async onStart(lib) {
                                     const args = this.args;
-                                    // TODO: Add more options
+                                    // TODO: Add more options (https://github.com/kotonone/kotonemu/pull/7#issuecomment-2081303265)
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R", "-C", "-l"],
                                         [
                                             "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive",
-                                            { "id": "--sort", "usesArgument": true, "needsArgument": true},
-                                            { "id": "--quoting-style", "usesArgument": true, "needsArgument": true},
-                                            { "id": "--indicator-style", "usesArgument": true, "needsArgument": true}
+                                            { "id": "--sort", "usesArgument": true, "needsArgument": true },
+                                            { "id": "--quoting-style", "usesArgument": true, "needsArgument": true },
+                                            { "id": "--indicator-style", "usesArgument": true, "needsArgument": true },
+                                            { "id": "--format", "usesArgument": true, "needsArgument": true }
                                         ],
                                         { stopInvalidOption: false }
                                     );
@@ -623,8 +624,12 @@ There is NO WARRANTY, to the extent permitted by law.
   -a, --all                  . で始まる要素を無視しない
   -A, --almost-all           . 及び .. を一覧表示しない
   -b, --escape               表示不可能な文字の場合に C 形式のエスケープ文字で表示する
+  -C                         複数列で要素を表示する (未実装)
   -F, --classify             要素にインジケータ（*/@のいずれか）を追加する
       --file-type            -Fと同じように追加するが、 '*' は追加しない
+      --format=WORD          WORDの形式で表示する:
+                               commas (-m), long (-l),
+                               single-column (-1), verbose (-l), vertical (-C)
       --indicator-style=WORD
                              WORDのインジケータを追加する:
                                none, classify (-F),
@@ -666,6 +671,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         const quotingType = { type: "literal", index: -1 };
                                         const sortingType = { type: "", index: -1 };
                                         const indicatorType = { type: "none", index: -1 };
+                                        const formatType = { type: "vertical", index: -1 }
                                         if (options.index["--all"] !== -1) {
                                             options.index["-a"] = Math.max(options.index["--all"], options.index["-a"])
                                             delete options.index["--all"];
@@ -683,62 +689,64 @@ There is NO WARRANTY, to the extent permitted by law.
                                             delete options.index["--reverse"];
                                         }
 
-                                        if (options.index["-U"] !== -1) {
-                                            if (options.index["-U"] >= sortingType.index) {
-                                                sortingType.type = "none";
-                                                sortingType.index = options.index["-U"];
+
+                                        sortingType: {
+                                            if (options.index["-U"] !== -1) {
+                                                if (options.index["-U"] >= sortingType.index) {
+                                                    sortingType.type = "none";
+                                                    sortingType.index = options.index["-U"];
+                                                }
+                                                delete options.index["-U"];
                                             }
-                                            delete options.index["-U"];
-                                        }
-                                        if (options.index["-X"] !== -1) {
-                                            if (options.index["-X"] >= sortingType.index) {
-                                                sortingType.type = "extension";
-                                                sortingType.index = options.index["-X"];
+                                            if (options.index["-X"] !== -1) {
+                                                if (options.index["-X"] >= sortingType.index) {
+                                                    sortingType.type = "extension";
+                                                    sortingType.index = options.index["-X"];
+                                                }
+                                                delete options.index["-X"];
                                             }
-                                            delete options.index["-X"];
-                                        }
-                                        if (options.index["-t"] !== -1) {
-                                            if (options.index["-t"] >= sortingType.index) {
-                                                sortingType.type = "time";
-                                                sortingType.index = options.index["-t"];
+                                            if (options.index["-t"] !== -1) {
+                                                if (options.index["-t"] >= sortingType.index) {
+                                                    sortingType.type = "time";
+                                                    sortingType.index = options.index["-t"];
+                                                }
+                                                delete options.index["-t"];
                                             }
-                                            delete options.index["-t"];
-                                        }
-                                        if (options.index["-v"] !== -1) {
-                                            if (options.index["-v"] >= sortingType.index) {
-                                                sortingType.type = "version";
-                                                sortingType.index = options.index["-v"];
+                                            if (options.index["-v"] !== -1) {
+                                                if (options.index["-v"] >= sortingType.index) {
+                                                    sortingType.type = "version";
+                                                    sortingType.index = options.index["-v"];
+                                                }
+                                                delete options.index["-v"];
                                             }
-                                            delete options.index["-v"];
-                                        }
-                                        if (options.index["-S"] !== -1) {
-                                            if (options.index["-S"] >= sortingType.index) {
-                                                sortingType.type = "size";
-                                                sortingType.index = options.index["-S"];
+                                            if (options.index["-S"] !== -1) {
+                                                if (options.index["-S"] >= sortingType.index) {
+                                                    sortingType.type = "size";
+                                                    sortingType.index = options.index["-S"];
+                                                }
+                                                delete options.index["-S"];
                                             }
-                                            delete options.index["-S"];
-                                        }
-                                        if (options.index["--sort"] !== -1) {
-                                            switch (options.optionsArguments["--sort"]) {
-                                                case "none":
-                                                case "extension":
-                                                case "time":
-                                                case "extensizesion":
-                                                case "version":
-                                                    if (options.index["--sort"] >= sortingType.index){
-                                                        sortingType.type = options.optionsArguments["--sort"];
-                                                        sortingType.index = options.index["--sort"]
-                                                    }
-                                                    delete options.index["--sort"];
-                                                    break;
-                                                case "":
-                                                case undefined:
-                                                    lib.io.write(`ls: '--sort' は引数が必要です
+                                            if (options.index["--sort"] !== -1) {
+                                                switch (options.optionsArguments["--sort"]) {
+                                                    case "none":
+                                                    case "extension":
+                                                    case "time":
+                                                    case "extensizesion":
+                                                    case "version":
+                                                        if (options.index["--sort"] >= sortingType.index){
+                                                            sortingType.type = options.optionsArguments["--sort"];
+                                                            sortingType.index = options.index["--sort"]
+                                                        }
+                                                        delete options.index["--sort"];
+                                                        break;
+                                                    case "":
+                                                    case undefined:
+                                                        lib.io.write(`ls: '--sort' は引数が必要です
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
-                                                default:
-                                                    lib.io.write(`ls: '--sort' に対する引数 '${options.optionsArguments["--sort"]}' が間違っています
+                                                        return;
+                                                    default:
+                                                        lib.io.write(`ls: '--sort' に対する引数 '${options.optionsArguments["--sort"]}' が間違っています
 有効な引数:
   - 'none'
   - 'time'
@@ -747,81 +755,85 @@ There is NO WARRANTY, to the extent permitted by law.
   - 'version'
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
+                                                        return;
+                                                }
                                             }
                                         }
+                                       
                                         if (options.index["-q"] !== -1) {
                                             options.index["--hide-control-chars"] = Math.max(options.index["--hide-control-chars"], options.index["-q"])
                                             delete options.index["-q"];
                                         }
-                                        if (options.index["-b"] !== -1) {
-                                            if (options.index["-b"] >= quotingType.index) {
-                                                quotingType.type = "escape";
-                                                quotingType.index = options.index["-b"];
+
+                                        quotingType: {
+                                            if (options.index["-b"] !== -1) {
+                                                if (options.index["-b"] >= quotingType.index) {
+                                                    quotingType.type = "escape";
+                                                    quotingType.index = options.index["-b"];
+                                                }
+                                                delete options.index["-b"];
                                             }
-                                            delete options.index["-b"];
-                                        }
-                                        if (options.index["--escape"] !== -1) {
-                                            if (options.index["--escape"] >= quotingType.index) {
-                                                quotingType.type = "escape";
-                                                quotingType.index = options.index["--escape"];
+                                            if (options.index["--escape"] !== -1) {
+                                                if (options.index["--escape"] >= quotingType.index) {
+                                                    quotingType.type = "escape";
+                                                    quotingType.index = options.index["--escape"];
+                                                }
+                                                delete options.index["--escape"];
                                             }
-                                            delete options.index["--escape"];
-                                        }
-                                        if (options.index["--quote-name"] !== -1) {
-                                            if (options.index["--quote-name"] >= quotingType.index) {
-                                                quotingType.type = "c";
-                                                quotingType.index = options.index["--quote-name"];
+                                            if (options.index["--quote-name"] !== -1) {
+                                                if (options.index["--quote-name"] >= quotingType.index) {
+                                                    quotingType.type = "c";
+                                                    quotingType.index = options.index["--quote-name"];
+                                                }
+                                                delete options.index["--quote-name"];
                                             }
-                                            delete options.index["--quote-name"];
-                                        }
-                                        if (options.index["-Q"] !== -1) {
-                                            if (options.index["-Q"] >= quotingType.index) {
-                                                quotingType.type = "c";
-                                                quotingType.index = options.index["-Q"];
+                                            if (options.index["-Q"] !== -1) {
+                                                if (options.index["-Q"] >= quotingType.index) {
+                                                    quotingType.type = "c";
+                                                    quotingType.index = options.index["-Q"];
+                                                }
+                                                delete options.index["-Q"];
                                             }
-                                            delete options.index["-Q"];
-                                        }
-                                        if (options.index["--literal"] !== -1) {
-                                            if (options.index["--literal"] >= quotingType.index) {
-                                                quotingType.type = "literal";
-                                                quotingType.index = options.index["--literal"];
+                                            if (options.index["--literal"] !== -1) {
+                                                if (options.index["--literal"] >= quotingType.index) {
+                                                    quotingType.type = "literal";
+                                                    quotingType.index = options.index["--literal"];
+                                                }
+                                                delete options.index["--literal"];
                                             }
-                                            delete options.index["--literal"];
-                                        }
-                                        if (options.index["-N"] !== -1) {
-                                            if (options.index["-N"] >= quotingType.index) {
-                                                quotingType.type = "literal";
-                                                quotingType.index = options.index["-N"];
+                                            if (options.index["-N"] !== -1) {
+                                                if (options.index["-N"] >= quotingType.index) {
+                                                    quotingType.type = "literal";
+                                                    quotingType.index = options.index["-N"];
+                                                }
+                                                delete options.index["-N"];
                                             }
-                                            delete options.index["-N"];
-                                        }
-                                        if (options.index["--quoting-style"] !== -1) {
-                                            switch (options.optionsArguments["--quoting-style"]) {
-                                                case "literal":
-                                                case "shell":
-                                                case "shell-always":
-                                                case 'shell-escape':
-                                                case 'shell-escape-always':
-                                                case 'c':
-                                                case 'c-maybe':
-                                                case 'escape':
-                                                case 'locale':
-                                                case 'clocale':
-                                                    if (options.index["--quoting-style"] >= sortingType.index){
-                                                        quotingType.type = options.optionsArguments["--quoting-style"];
-                                                        sortingType.index = options.index["--quoting-style"]
-                                                    }
-                                                    delete options.index["--quoting-style"];
-                                                    break;
-                                                case "":
-                                                case undefined:
-                                                    lib.io.write(`ls: '--quoting-style' は引数が必要です
+                                            if (options.index["--quoting-style"] !== -1) {
+                                                switch (options.optionsArguments["--quoting-style"]) {
+                                                    case "literal":
+                                                    case "shell":
+                                                    case "shell-always":
+                                                    case 'shell-escape':
+                                                    case 'shell-escape-always':
+                                                    case 'c':
+                                                    case 'c-maybe':
+                                                    case 'escape':
+                                                    case 'locale':
+                                                    case 'clocale':
+                                                        if (options.index["--quoting-style"] >= sortingType.index){
+                                                            quotingType.type = options.optionsArguments["--quoting-style"];
+                                                            quotingType.index = options.index["--quoting-style"]
+                                                        }
+                                                        delete options.index["--quoting-style"];
+                                                        break;
+                                                    case "":
+                                                    case undefined:
+                                                        lib.io.write(`ls: '--quoting-style' は引数が必要です
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
-                                                default:
-                                                    lib.io.write(`ls: '--quoting-style' に対する引数 '${options.optionsArguments["--quoting-style"]}' が間違っています
+                                                        return;
+                                                    default:
+                                                        lib.io.write(`ls: '--quoting-style' に対する引数 '${options.optionsArguments["--quoting-style"]}' が間違っています
 有効な引数:
   - 'literal'
   - 'shell'
@@ -835,58 +847,60 @@ There is NO WARRANTY, to the extent permitted by law.
   - 'clocale'
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
+                                                        return;
+                                                }
                                             }
                                         }
 
-                                        if (options.index["-F"] !== -1) {
-                                            if (options.index["-F"] >= indicatorType.index) {
-                                                indicatorType.type = "classify";
-                                                indicatorType.index = options.index["-F"];
+                                        indicatorType: {
+                                            if (options.index["-F"] !== -1) {
+                                                if (options.index["-F"] >= indicatorType.index) {
+                                                    indicatorType.type = "classify";
+                                                    indicatorType.index = options.index["-F"];
+                                                }
+                                                delete options.index["-F"];
                                             }
-                                            delete options.index["-F"];
-                                        }
-                                        if (options.index["--classify"] !== -1) {
-                                            if (options.index["--classify"] >= indicatorType.index) {
-                                                indicatorType.type = "classify";
-                                                indicatorType.index = options.index["--classify"];
+                                            if (options.index["--classify"] !== -1) {
+                                                if (options.index["--classify"] >= indicatorType.index) {
+                                                    indicatorType.type = "classify";
+                                                    indicatorType.index = options.index["--classify"];
+                                                }
+                                                delete options.index["--classify"];
                                             }
-                                            delete options.index["--classify"];
-                                        }
-                                        if (options.index["--file-type"] !== -1) {
-                                            if (options.index["--file-type"] >= indicatorType.index) {
-                                                indicatorType.type = "file-type";
-                                                indicatorType.index = options.index["--file-type"];
+                                            if (options.index["--file-type"] !== -1) {
+                                                if (options.index["--file-type"] >= indicatorType.index) {
+                                                    indicatorType.type = "file-type";
+                                                    indicatorType.index = options.index["--file-type"];
+                                                }
+                                                delete options.index["--file-type"];
                                             }
-                                            delete options.index["--file-type"];
-                                        }
-                                        if (options.index["-p"] !== -1) {
-                                            if (options.index["-p"] >= indicatorType.index) {
-                                                indicatorType.type = "slash";
-                                                indicatorType.index = options.index["-p"];
+                                            if (options.index["-p"] !== -1) {
+                                                if (options.index["-p"] >= indicatorType.index) {
+                                                    indicatorType.type = "slash";
+                                                    indicatorType.index = options.index["-p"];
+                                                }
+                                                delete options.index["-p"];
                                             }
-                                            delete options.index["-p"];
-                                        }
-                                        if (options.index["--indicator-style"] !== -1) {
-                                            switch (options.optionsArguments["--indicator-style"]) {
-                                                case "none":
-                                                case "slash":
-                                                case "file-type":
-                                                case "classify":
-                                                    if (options.index["--indicator-style"] >= indicatorType.index){
-                                                        indicatorType.type = options.optionsArguments["--indicator-style"];
-                                                        indicatorType.index = options.index["--indicator-style"]
-                                                    }
-                                                    delete options.index["--indicator-style"];
-                                                    break;
-                                                case "":
-                                                case undefined:
-                                                    lib.io.write(`ls: '--indicator-style' は引数が必要です
+                                            if (options.index["--indicator-style"] !== -1) {
+                                                switch (options.optionsArguments["--indicator-style"]) {
+                                                    case "none":
+                                                    case "slash":
+                                                    case "file-type":
+                                                    case "classify":
+                                                        if (options.index["--indicator-style"] >= indicatorType.index){
+                                                            indicatorType.type = options.optionsArguments["--indicator-style"];
+                                                            indicatorType.index = options.index["--indicator-style"]
+                                                        }
+                                                        delete options.index["--indicator-style"];
+                                                        break;
+                                                    case "":
+                                                    case undefined:
+                                                        lib.io.write(`ls: '--indicator-style' は引数が必要です
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
-                                                default:
-                                                    lib.io.write(`ls: '--indicator-style' に対する引数 '${options.optionsArguments["--indicator-style"]}' が間違っています
+                                                        return;
+                                                    default:
+                                                        lib.io.write(`ls: '--indicator-style' に対する引数 '${options.optionsArguments["--indicator-style"]}' が間違っています
 有効な引数:
   - 'none'
   - 'slash'
@@ -894,9 +908,80 @@ There is NO WARRANTY, to the extent permitted by law.
   - 'classify'
 詳しくは'ls --help'を実行してください
 `, 2)
-                                                    return;
+                                                        return;
+                                                }
                                             }
                                         }
+
+                                        formatType: {
+                                            if (options.index["-C"] !== -1) {
+                                                if (options.index["-C"] >= formatType.index) {
+                                                    formatType.type = "vertical";
+                                                    formatType.index = options.index["-C"];
+                                                }
+                                                delete options.index["-C"];
+                                            }
+                                            if (options.index["-1"] !== -1) {
+                                                if (options.index["-1"] >= formatType.index) {
+                                                    formatType.type = "single-column";
+                                                    formatType.index = options.index["-1"];
+                                                }
+                                                delete options.index["-1"];
+                                            }
+                                            if (options.index["-l"] !== -1) {
+                                                if (options.index["-l"] >= formatType.index) {
+                                                    formatType.type = "long";
+                                                    formatType.index = options.index["-l"];
+                                                }
+                                                delete options.index["-l"];
+                                            }
+                                            if (options.index["-m"] !== -1) {
+                                                if (options.index["-m"] >= formatType.index) {
+                                                    formatType.type = "commas";
+                                                    formatType.index = options.index["-m"];
+                                                }
+                                                delete options.index["-m"];
+                                            }
+                                            if (options.index["--format"] !== -1) {
+                                                switch (options.optionsArguments["--format"]) {
+                                                    case "commas":
+                                                    case "long":
+                                                    case "single-column":
+                                                    case 'vertical':
+                                                        if (options.index["--format"] >= formatType.index){
+                                                            formatType.type = options.optionsArguments["--format"];
+                                                            formatType.index = options.index["--format"]
+                                                        }
+                                                        delete options.index["--format"];
+                                                        break;
+                                                    case 'verbose':
+                                                        if (options.index["--format"] >= formatType.index){
+                                                            formatType.type = "long";
+                                                            formatType.index = options.index["--format"]
+                                                        }
+                                                        delete options.index["--format"];
+                                                        break;
+                                                    case "":
+                                                    case undefined:
+                                                        lib.io.write(`ls: '--format' は引数が必要です
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                        return;
+                                                    default:
+                                                        lib.io.write(`ls: '--format' に対する引数 '${options.optionsArguments["--format"]}' が間違っています
+有効な引数:
+  - 'commas'
+  - 'long'
+  - 'single-column'
+  - 'verbose'
+  - 'vertical'
+詳しくは'ls --help'を実行してください
+`, 2)
+                                                        return;
+                                                }
+                                            }
+                                        }
+
     
                                         let directories = options.arguments;
                                         if (directories.length === 0) {
@@ -1089,9 +1174,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 directories.splice(index + 1, 0, ...childrenDirectory)
                                             }
 
-                                            if (options.index["-1"] === -1 && options.index["-m"] === -1) {
+                                            if (formatType.type === "vertical") {
                                                 return fileList.join("  ");
-                                            } else if (options.index["-1"] < options.index["-m"]) {
+                                            } else if (formatType.type === "commas") {
                                                 return fileList.join(", ");
                                             } else {
                                                 return fileList.join("\n");
