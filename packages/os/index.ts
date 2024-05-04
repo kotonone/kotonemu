@@ -6,6 +6,16 @@ import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/U
 import { File } from "@/core/File";
 import { Stat } from "@/core/Process";
 
+const users: {
+    [key: number]: string;
+} = {
+    0: "root"
+};
+const groups: {
+    [key: number]: string;
+} = {
+    0: "root"
+}
 /** ShalfeltOS を生成します。 */
 export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: File[] } {
     return {
@@ -605,9 +615,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options (https://github.com/kotonone/kotonemu/pull/7#issuecomment-2081303265)
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R", "-C", "-l"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R", "-C", "-l", "-o", "-G", "-g", "-n"],
                                         [
-                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive",
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive", "--numeric-uid-gid", "--no-group",
                                             { "id": "--sort", "usesArgument": true, "needsArgument": true },
                                             { "id": "--quoting-style", "usesArgument": true, "needsArgument": true },
                                             { "id": "--indicator-style", "usesArgument": true, "needsArgument": true },
@@ -630,12 +640,17 @@ There is NO WARRANTY, to the extent permitted by law.
       --format=WORD          WORDの形式で表示する:
                                commas (-m), long (-l),
                                single-column (-1), verbose (-l), vertical (-C)
+  -g                         -l と同様だがファイル所有者を表示しない
+  -G, --no-group             -l と併用したときにグループ情報を表示しない
       --indicator-style=WORD
                              WORDのインジケータを追加する:
                                none, classify (-F),
                                file-type (--file-type), slash (-p)
+  -l                         詳細リスト形式で表示する
   -m                         要素のリストをカンマで区切る
+  -n, --numeric-uid-gid      -l と同様だがファイル所有者とグループ情報をIDで表示する
   -N, --literal              要素名をそのまま表示する
+  -o                         -l と同様だがグループ情報を表示しない
   -p                         ディレクトリにインジケータ '/' を追加する
   -q, --hide-control-chars   表示不可能な文字を ? で表示する
       --show-control-chars   表示不可能な文字をそのまま表示する
@@ -935,6 +950,28 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 }
                                                 delete options.index["-l"];
                                             }
+                                            if (options.index["-o"] !== -1) {
+                                                if (options.index["-o"] >= formatType.index) {
+                                                    formatType.type = "long";
+                                                    formatType.index = options.index["-o"];
+                                                }
+                                            }
+                                            if (options.index["-g"] !== -1) {
+                                                if (options.index["-g"] >= formatType.index) {
+                                                    formatType.type = "long";
+                                                    formatType.index = options.index["-g"];
+                                                }
+                                            }
+                                            if (options.index["--numeric-uid-gid"] !== -1) {
+                                                options.index["-n"] = Math.max(options.index["--numeric-uid-gid"], options.index["-n"])
+                                                delete options.index["--numeric-uid-gid"];
+                                            }
+                                            if (options.index["-n"] !== -1) {
+                                                if (options.index["-n"] >= formatType.index) {
+                                                    formatType.type = "long";
+                                                    formatType.index = options.index["-n"];
+                                                }
+                                            }
                                             if (options.index["-m"] !== -1) {
                                                 if (options.index["-m"] >= formatType.index) {
                                                     formatType.type = "commas";
@@ -980,6 +1017,10 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         return;
                                                 }
                                             }
+                                        }
+                                        if (options.index["--no-group"] !== -1) {
+                                            options.index["-G"] = Math.max(options.index["--no-group"], options.index["-G"])
+                                            delete options.index["--no-group"];
                                         }
 
     
@@ -1164,6 +1205,35 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     if (options.index["-1"] === -1) {
                                                         fileData = fileData.replaceAll("\x0a","?");
                                                     }
+                                                }
+
+                                                if (formatType.type === "long") {
+                                                    let fileDetails = "";
+                                                    if (stats[fileName].mode & StatMode.IFDIR) {
+                                                        fileDetails += "d";
+                                                    } else if (stats[fileName].mode & (StatMode.IFLNK ^ StatMode.IFREG)) {
+                                                        fileDetails += "l";
+                                                    } else/* if (stats[fileName].mode & StatMode.IFREG)*/ {
+                                                        fileDetails += "-";
+                                                    }
+                                                    fileDetails += `${(stats[fileName].mode & 0b100000000) ? "r" : "-"}${(stats[fileName].mode & 0b010000000) ? "w" : "-"}${(stats[fileName].mode & 0b001000000) ? "x" : "-"}${(stats[fileName].mode & 0b000100000) ? "r" : "-"}${(stats[fileName].mode & 0b000010000) ? "w" : "-"}${(stats[fileName].mode & 0b000001000) ? "x" : "-"}${(stats[fileName].mode & 0b000000100) ? "r" : "-"}${(stats[fileName].mode & 0b000000010) ? "w" : "-"}${(stats[fileName].mode & 0b000000001) ? "x" : "-"} ` ;
+
+                                                    if (options.index["-o"] === -1 && options.index["-G"] === -1) {
+                                                        if (options.index["-n"] === -1) {
+                                                            fileDetails += `${groups[stats[fileName].group]} `;
+                                                        } else {
+                                                            fileDetails += `${stats[fileName].group} `;
+                                                        }
+                                                    }
+
+                                                    if (options.index["-g"] === -1) {
+                                                        if (options.index["-n"] === -1) {
+                                                            fileDetails += `${groups[stats[fileName].owner]} `;
+                                                        } else {
+                                                            fileDetails += `${stats[fileName].owner} `;
+                                                        }
+                                                    }
+                                                    fileData = fileDetails + fileData;
                                                 }
 
                                                 fileList.push(fileData);
