@@ -902,15 +902,11 @@ There is NO WARRANTY, to the extent permitted by law.
                                         if (directories.length === 0) {
                                             directories.push("./");
                                         }
-                                        const getFileList = (dir: string) => {
-                                            let files = this.readdir(dir);
-                                            if (options.index["-A"] < options.index["-a"]) {
-                                                files = [".", "..", ...files];
-                                            }
+                                        const sortFileList = (fileList : string[]) => {
                                             // TODO: size, version, time
                                             if (sortingType.type !== "none") {
                                                 if (sortingType.type === "extension") {
-                                                    files.sort((a, b) => {
+                                                    fileList.sort((a, b) => {
                                                         let aType = -1;
                                                         let bType = -1;
                                                         if (!a.includes(".")) {
@@ -952,14 +948,23 @@ There is NO WARRANTY, to the extent permitted by law.
                                                         }
                                                     });
                                                 } else {
-                                                    files.sort();
+                                                    fileList.sort();
                                                 }
                                             }
                                             if (options.index["-r"] !== -1) {
-                                                files.reverse();
+                                                fileList.reverse();
                                             }
+                                        };
+                                        const getFileList = (dir: string, index: number) => {
+                                            let files = this.readdir(dir);
+                                            if (options.index["-A"] < options.index["-a"]) {
+                                                files = [".", "..", ...files];
+                                            }
+                                            sortFileList(files);
+
                                             const fileList = [];
                                             const stats: {[key: string]: Stat} = {};
+                                            const childrenDirectory = [];
                                             for (const fileName of files) {
                                                 let fileData = fileName;
                                                 if (options.index["-A"] === -1 && options.index["-a"] === -1) {
@@ -968,10 +973,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     }
                                                 }
                                                 stats[fileName] = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`)
-                                                if (options.index["-R"] !== -1) {
+                                                if (options.index["-R"] !== -1 && fileName !== "." && fileName !== "..") {
                                                     if (stats[fileName].mode & StatMode.IFDIR) {
-                                                        directories.push(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
-                                                        directories.sort();
+                                                        childrenDirectory.push(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
                                                     } 
                                                 }
                                                 if (indicatorType.type !== "none") {
@@ -1080,6 +1084,11 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 fileList.push(fileData);
                                             }
 
+                                            if (childrenDirectory.length !== 0) {
+                                                sortFileList(childrenDirectory);
+                                                directories.splice(index + 1, 0, ...childrenDirectory)
+                                            }
+
                                             if (options.index["-1"] === -1 && options.index["-m"] === -1) {
                                                 return fileList.join("  ");
                                             } else if (options.index["-1"] < options.index["-m"]) {
@@ -1090,7 +1099,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         }
                                         if (directories.length === 1 && options.index["-R"] === -1) {
                                             try {
-                                                lib.io.write(getFileList(directories[0]), 1);
+                                                lib.io.write(getFileList(directories[0], 0), 1);
                                             } catch (e) {
                                                 if (e instanceof ENOENT) {
                                                     lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
@@ -1103,9 +1112,10 @@ There is NO WARRANTY, to the extent permitted by law.
                                         } else {
                                             const list = [];
                                             for (let i = 0; i < directories.length; i++) {
+                                                console.log(directories);
                                                 const directoryPath = directories[i];
                                                 try {
-                                                    list.push(`${directoryPath}:\n${getFileList(directoryPath)}`);
+                                                    list.push(`${directoryPath}:\n${getFileList(directoryPath, i)}`);
                                                 } catch (e){
                                                     if (e instanceof ENOENT) {
                                                         lib.io.write(`ls: '${directoryPath}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
