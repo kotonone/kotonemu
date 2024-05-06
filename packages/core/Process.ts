@@ -452,6 +452,40 @@ export class Process {
         return this.emulator.info;
     }
 
+    private _chown(entry: IFile, owner: number, group: number): void {
+        entry.owner = owner;
+        entry.group = group;
+    }
+    /**
+     * ファイルの所有権を変更します。
+     * @param pathname パス名
+     * @param owner ユーザー ID (UID)
+     * @param group グループ ID (GID)
+     */
+    public chown(pathname: string, owner: number, group: number): void {
+        return this._chown(this._getEntryFromPathname(pathname, true), owner, group);
+    }
+    /**
+     * ファイルディスクリプタからファイルの所有権を変更します。
+     * @param fd ファイルディスクリプタ
+     * @param owner ユーザー ID (UID)
+     * @param group グループ ID (GID)
+     */
+    public fchown(fd: number, owner: number, group: number): void {
+        const fdd = this._requireFileDescriptorData(fd);
+        const entry = this._getEntryFromPathname(fdd.pathname);
+        return this._chown(entry, owner, group);
+    }
+    /**
+     * ファイルの所有権を変更します。シンボリックリンクの場合でも、リンクを解決しません。
+     * @param pathname パス名
+     * @param owner ユーザー ID (UID)
+     * @param group グループ ID (GID)
+     */
+    public lchown(pathname: string, owner: number, group: number): void {
+        return this._chown(this._getEntryFromPathname(pathname), owner, group);
+    }
+
     /**
      * プロセスを新しく生成します。
      * @param callback 実行するマイクロプロセス
