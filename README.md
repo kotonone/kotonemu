@@ -40,6 +40,7 @@ For example, ... games that put a little too much emphasis on technology?
 * readdir
 * rmdir
 * symlink
+* readlink
 * uname
 * spawn
 * exec
