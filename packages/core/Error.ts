@@ -86,3 +86,11 @@ export class EINVAL extends OSError {
         this.message = "Invalid argument";
     }
 }
+
+/** 権限が不足しているエラー */
+export class EACCES extends OSError {
+    constructor() {
+        super();
+        this.message = "Permission denied";
+    }
+}

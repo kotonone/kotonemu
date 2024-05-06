@@ -1,5 +1,5 @@
 import { Emulator, EmulatorInfo } from "./Emulator";
-import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL } from "./Error";
+import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL, EACCES } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
 import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
 import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
@@ -171,6 +171,21 @@ export class Process {
 
         parentEntry.children.push(entry);
     }
+    /**
+     * 指定されたエントリにおいて、指定されたモードの権限が有効になっているか確認します。
+     * @param entry エントリ
+     * @param mode モード（0 - 7 で指定）
+     */
+    private _isPermitted(entry: IFile, mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): boolean {
+        let owner_mode = entry.mode >> 6;
+        let group_mode = (entry.mode | 0o700) - 0o700 >> 3;
+        let other_mode = (entry.mode | 0o770) - 0o770;
+
+        // TODO: owner/groupの識別ができるようになり次第、owner_modeを `entry.owner is me ? owner_mode : 0` にする
+        let current_mode = owner_mode | group_mode | other_mode;
+
+        return !!(current_mode & mode);
+    }
 
     /**
      * ファイルディスクリプタを開きます。
@@ -183,6 +198,9 @@ export class Process {
             entry = this._getEntryFromPathname(pathname, true);
         } catch (e) {
             if (flags & OpenFlag.WRITE && e instanceof ENOENT) {
+                const parentEntry = this._getEntryFromPathname(dirname(pathname));
+                if (!this._isPermitted(parentEntry, 0o2)) throw new EACCES();
+
                 this._createEntry(dirname(pathname), <RegularFile>{
                     name: basename(pathname),
                     type: "regular-file",
@@ -204,6 +222,9 @@ export class Process {
         if (isDirectory(entry)) {
             throw new EISDIR(pathname);
         }
+
+        if (flags & OpenFlag.READ && !this._isPermitted(entry, 0o4)) throw new EACCES();
+        if (flags & OpenFlag.WRITE && !this._isPermitted(entry, 0o2)) throw new EACCES();
 
         const fd = this._createFileDescriptor(pathname, flags);
         this._createEntry(join(this.emulator.PROCESS_DIRECTORY, this.id.toString(), "fd"), <SymbolicLink>{
