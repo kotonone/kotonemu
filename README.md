@@ -34,7 +34,7 @@ For example, ... games that put a little too much emphasis on technology?
 * seek
 * read
 * write
-* stat
+* stat, fstat, lstat
 * unlink
 * mkdir
 * readdir
@@ -42,6 +42,7 @@ For example, ... games that put a little too much emphasis on technology?
 * symlink
 * readlink
 * uname
+* chown, fchown, lchown
 * spawn
 * exec
 
