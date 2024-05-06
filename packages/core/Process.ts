@@ -320,13 +320,6 @@ export class Process {
         return this._stat(this._getEntryFromPathname(pathname, true));
     }
     /**
-     * ファイルの状態を取得します。シンボリックリンクの場合でも、リンクを解決しません。
-     * @param pathname パス名
-     */
-    public lstat(pathname: string): Stat {
-        return this._stat(this._getEntryFromPathname(pathname));
-    }
-    /**
      * ファイルディスクリプタからファイルの状態を取得します。
      * @param fd ファイルディスクリプタ
      */
@@ -334,6 +327,13 @@ export class Process {
         const fdd = this._requireFileDescriptorData(fd);
         const entry = this._getEntryFromPathname(fdd.pathname);
         return this._stat(entry);
+    }
+    /**
+     * ファイルの状態を取得します。シンボリックリンクの場合でも、リンクを解決しません。
+     * @param pathname パス名
+     */
+    public lstat(pathname: string): Stat {
+        return this._stat(this._getEntryFromPathname(pathname));
     }
 
     /**
