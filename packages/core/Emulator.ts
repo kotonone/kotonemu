@@ -55,7 +55,9 @@ export class Emulator {
         tty: this.DEFAULT_TTY,
         env: {
             PWD: "/"
-        }
+        },
+        uid: 0,
+        gid: 0
     });
     public newPid: number = 1;
 

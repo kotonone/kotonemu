@@ -44,6 +44,8 @@ For example, ... games that put a little too much emphasis on technology?
 * uname
 * chown, fchown, lchown
 * chmod, fchmod
+* getuid, setuid
+* getgid, setgid
 * spawn
 * exec
 

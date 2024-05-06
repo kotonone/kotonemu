@@ -49,6 +49,12 @@ export interface ProcessInit {
 
     /** プロセスの環境変数 */
     env: Record<string, string>;
+
+    /** ユーザー ID */
+    uid: number;
+
+    /** グループ ID */
+    gid: number;
 }
 
 /** プロセス */
@@ -77,6 +83,11 @@ export class Process {
     /** 子プロセス */
     public children: Process[];
 
+    /** プロセスが実行されているユーザー ID */
+    public uid: number;
+    /** プロセスが実行されているグループ ID */
+    public gid: number;
+
     private newFdId: number = 0;
 
     public constructor(emulator: Emulator, process: ProcessInit) {
@@ -88,6 +99,8 @@ export class Process {
         this.children = [];
         this.args = process.args ?? [];
         this.env = process.env;
+        this.uid = 0;
+        this.gid = 0;
     }
 
     /**
@@ -181,8 +194,10 @@ export class Process {
         let group_mode = (entry.mode | 0o700) - 0o700 >> 3;
         let other_mode = (entry.mode | 0o770) - 0o770;
 
-        // TODO: owner/groupの識別ができるようになり次第、owner_modeを `entry.owner is me ? owner_mode : 0` にする
-        let current_mode = owner_mode | group_mode | other_mode;
+        let current_mode =
+            (entry.owner === this.uid ? owner_mode : 0) |
+            (entry.group === this.gid ? group_mode : 0) |
+            other_mode;
 
         return !!(current_mode & mode);
     }
@@ -530,6 +545,35 @@ export class Process {
     }
 
     /**
+     * このプロセスが動作しているユーザー IDを取得します。
+     */
+    public getuid(): number {
+        return this.uid;
+    }
+    /**
+     * このプロセスが動作しているユーザー IDを設定します。
+     * @param uid ユーザー ID
+     */
+    public setuid(uid: number): void {
+        // TODO: EPERM, rw**s**, https://qiita.com/pyon_kiti_jp/items/9918dcfc6a350fd007b1
+        this.uid = uid;
+    }
+    /**
+     * このプロセスが動作しているグループ IDを取得します。
+     */
+    public getgid(): number {
+        return this.gid;
+    }
+    /**
+     * このプロセスが動作しているグループ IDを設定します。
+     * @param gid グループ ID
+     */
+    public setgid(gid: number): void {
+        // TODO: EPERM, rw**s**, https://qiita.com/pyon_kiti_jp/items/9918dcfc6a350fd007b1
+        this.gid = gid;
+    }
+
+    /**
      * プロセスを新しく生成します。
      * @param callback 実行するマイクロプロセス
      */
@@ -538,7 +582,9 @@ export class Process {
             id: this.emulator.newPid,
             name: "New Process",
             tty: this.tty,
-            env: this.env
+            env: this.env,
+            uid: this.uid,
+            gid: this.gid
         });
         this.emulator.newPid++;
         this.children.push(process);
