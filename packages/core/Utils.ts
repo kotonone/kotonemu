@@ -142,22 +142,29 @@ export function split(content: string, variables: Record<string, string> = {}) {
 
 type oneHyphenOptionsList = (string | { id: string, needsArgument?: boolean })[];
 type twoHyphensOptionsList = (string | { id: string, usesArgument?: boolean, needsArgument?: boolean })[];
-type optionsData = { index: { [id: string]: number }, arguments: { [id: string]: unknown }, lastOptionIndex: number, invalidOption?: string };
+type parseConfig = { stopInvalidOption: boolean; };
+type optionsData = { index: { [id: string]: number }, optionsArguments: { [id: string]: unknown }, lastOptionIndex: number, invalidOption?: string, arguments: string[] };
 /**
- * コマンドの引数からオプションについての情報を引き出します。  
- * オプションではない引数が見つかった時点で停止します。  
- * oneHyphen/twoHyphensに含まれないオプション・引数を受け付けないのに引数が含まれるオプションが見つかった場合はその時点で戻り値にinvalidOptionを含めてとして停止します。  
+ * コマンドの引数からオプションについての情報を引き出します。   
+ * 引数を受け付けないのに引数が含まれるオプションが見つかった場合はその時点で戻り値にinvalidOptionを含めてとして停止します。  
  * 
  * @param args オプションから始まる引数の配列
  * @param oneHyphen ハイフンが一つのオプションの配列
  * @param twoHyphens ハイフンが二つのオプションの配列
+ * @param config オプションをパースするときのオプション  
+ * - stopInvalidOption: 初期値:true  
+ * trueの場合、オプションではない引数が見つかった場合もその時点で戻り値にinvalidOptionを含めてとして停止します。  
+ * また、oneHyphen/twoHyphensに含まれないオプションがあった場合は戻り値にlastOptionIndexを含めて停止します。  
+ * falseの場合は、戻り値にargumentsを含めます。  
+ * 
  * @returns オプションに関する情報(Object型)  
- * index: key:オプション名 value:オプションの順番(一番最初のオプションから重複ありで番号をつけ、一番最後のものを登録しています。)
- * arguments key:オプション名 value:オプションの引数(引数が用いられるオプションのみ、一番最後の引数を登録します。)
- * lastOptionIndex: argsのうちオプションである一番最後の引数の添字(オプションが含まれない場合は-1となります。)
- * invalidOption: 一番最初の不正なオプション
+ * - index: key:オプション名 value:オプションの順番(一番最初のオプションから重複ありで番号をつけ、一番最後のものを登録しています。)
+ * - optionsArguments key:オプション名 value:オプションの引数(引数が用いられるオプションのみ、一番最後の引数を登録します。)
+ * - lastOptionIndex: argsのうちオプションである一番最後の引数の添字(オプションが含まれない場合は-1となります。)
+ * - invalidOption: 一番最初の不正なオプション
+ * - arguments: config.stopInvalidOptionがfalseの時のオプションでない引数
  */
-export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [], twoHyphens: twoHyphensOptionsList = []) {
+export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [], twoHyphens: twoHyphensOptionsList = [], config: parseConfig = { stopInvalidOption: true }) {
     const oneHyphenOptionsName = oneHyphen.map(e => (typeof e === "string") ? e : e.id);
     const twoHyphensOptionsName = twoHyphens.map(e => (typeof e === "string") ? e : e.id);
     const optionInfomation: { [key:string]: {usesArgument?: boolean, needsArgument?: boolean}} = {};
@@ -175,24 +182,31 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
         }
     }
 
-    const returnOptionsData: optionsData = { index:{}, arguments:{}, lastOptionIndex: -1};
+    const returnOptionsData: optionsData = { index:{}, optionsArguments:{}, lastOptionIndex: -1, arguments: []};
     let optionsCount = 0;
     let needContinue = false
+    let notConfigSince = false;
     for (const arg of args) {
         if (returnOptionsData.invalidOption) {
             break;
         } else if (needContinue) {
             needContinue = false;
             continue;
-        } else if (!arg.startsWith("-") || arg === "--") {
-            break;
+        } else if (!arg.startsWith("-") || notConfigSince) {
+            returnOptionsData.arguments.push(arg);
+        } else if (arg === "--") {
+            if (config.stopInvalidOption) {
+                break;
+            } else {
+                notConfigSince = true;
+            }
         } else if (arg.startsWith("--")) {
             if (arg.includes("=")) {
                 const optionName = arg.slice(0, arg.indexOf('='));
                 if (twoHyphensOptionsName.includes(optionName) && optionName in optionInfomation && optionInfomation[optionName].usesArgument) {
                     returnOptionsData.index[optionName] = optionsCount++;
                     returnOptionsData.lastOptionIndex++;
-                    returnOptionsData.arguments[optionName] = arg.replace(optionName + "=", "")
+                    returnOptionsData.optionsArguments[optionName] = arg.replace(optionName + "=", "")
                 } else {
                     returnOptionsData.invalidOption = optionName;
                 }
@@ -202,7 +216,7 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     returnOptionsData.lastOptionIndex++;
                     if (optionName in optionInfomation && optionInfomation[optionName].usesArgument && optionInfomation[optionName].needsArgument) {
-                        returnOptionsData.arguments[optionName] = args[++returnOptionsData.lastOptionIndex]
+                        returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
                         needContinue = true
                     }
                 } else {
@@ -217,10 +231,10 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     if (optionName in optionInfomation && optionInfomation[optionName].needsArgument) {
                             if (i == arg.length - 1) {
-                                returnOptionsData.arguments[optionName] = args[++returnOptionsData.lastOptionIndex]
+                                returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
                                 needContinue = true
                             } else {
-                                returnOptionsData.arguments[optionName] = arg.slice(i + 1);
+                                returnOptionsData.optionsArguments[optionName] = arg.slice(i + 1);
                                 break;
                             }
                     }
