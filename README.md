@@ -43,6 +43,7 @@ For example, ... games that put a little too much emphasis on technology?
 * readlink
 * uname
 * chown, fchown, lchown
+* chmod, fchmod
 * spawn
 * exec
 

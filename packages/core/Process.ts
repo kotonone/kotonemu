@@ -507,6 +507,28 @@ export class Process {
         return this._chown(this._getEntryFromPathname(pathname), owner, group);
     }
 
+    private _chmod(entry: IFile, mode: number): void {
+        entry.mode = mode;
+    }
+    /**
+     * ファイルの権限を変更します。
+     * @param pathname パス名
+     * @param mode モード
+     */
+    public chmod(pathname: string, mode: number): void {
+        return this._chmod(this._getEntryFromPathname(pathname, true), mode);
+    }
+    /**
+     * ファイルディスクリプタからファイルの権限を変更します。
+     * @param fd ファイルディスクリプタ
+     * @param mode モード
+     */
+    public fchmod(fd: number, mode: number): void {
+        const fdd = this._requireFileDescriptorData(fd);
+        const entry = this._getEntryFromPathname(fdd.pathname);
+        return this._chmod(entry, mode);
+    }
+
     /**
      * プロセスを新しく生成します。
      * @param callback 実行するマイクロプロセス
