@@ -2,7 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
-import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split, parseOptions, dirname } from "@/core/Utils";
 import { File } from "@/core/File";
 import { Stat } from "@/core/Process";
 
@@ -1287,6 +1287,85 @@ There is NO WARRANTY, to the extent permitted by law.
                                     }
                                 }
                             },
+                            {
+                                name: "mkdir",
+                                type: "executable-file",
+                                owner: 0,
+                                group: 0,
+                                mode: 0o777,
+                                deleted: false,
+                                protected: true,
+
+                                async onStart(lib) {
+                                    const args = this.args;
+                                    let options = parseOptions(
+                                        args,
+                                        ["-p", "-b", { "id": "-m", "needsArgument": true }],
+                                        [
+                                            "--parents", "--verbose", "--help", "--version",
+                                            { "id": "--mode", "usesArgument": true, "needsArgument": true },
+                                        ],
+                                        { stopInvalidOption: false }
+                                    );
+
+                                    if (options.index["--help"] !== -1) {
+                                        lib.io.write(
+`使用法: mkdir [オプション]... ディレクトリ...
+ディレクトリがまだない場合に作成します。
+
+ロングオプションで必須なオプションは、ショートオプションでも必須です。
+  -m, --mode=MODE   chmodのようにファイルモードを変更する
+  -p, --parents     親ディレクトリが存在しない場合は作成する
+  -v, --verbose     ディレクトリが作成される事にメッセージを表示する
+      --help     この使い方を表示して終了する
+      --version  バージョン情報を表示して終了する
+
+`, 1);
+                                    } else if (options.index["--version"] !== -1) {
+                                        lib.io.write(
+`mkdir (ShalfeltOS Coreutils) 1.0.0
+Copyright (c) 2024 Kotonone and ShalfeltOS contributors
+MIT License: https://opensource.org/license/mit.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+作者 Kotonone and ShalfeltOS contributors
+`, 1);
+                                    } else {
+                                        if (options.index["--parents"] !== -1) {
+                                            options.index["-p"] = Math.max(options.index["--parents"], options.index["-p"]);
+                                            delete options.index["--parents"];
+                                        }
+                                        if (options.index["--verbose"] !== -1) {
+                                            options.index["-b"] = Math.max(options.index["--verbose"], options.index["-b"]);
+                                            delete options.index["--verbose"];
+                                        }
+                                        const directoryPath = options.arguments[0];
+                                        const mode = 0o777
+                                        const makeDirectory = (path: string) => {
+                                            try {
+                                                this.mkdir(path, mode);
+                                                if (options.index["-b"] !== -1) lib.io.write(`mkdir: ディレクトリ '${path}' を作成しました\n`, 1);
+                                            } catch (e) {
+                                                if (e instanceof ENOENT) {
+                                                    if (options.index["-p"] === -1) {
+                                                        lib.io.write(`mkdir: ディレクトリ '${path}' を作成できません: そのようなファイルやディレクトリはありません\n`, 2);
+                                                    } else {
+                                                        this.mkdir(dirname(path), mode);
+
+                                                        // NOTE: -pがない場合はこっちに入らないので、throw以外で止まることを考慮する必要はない
+                                                        this.mkdir(path, mode);
+                                                        if (options.index["-b"] !== -1) lib.io.write(`mkdir: ディレクトリ '${path}' を作成しました\n`, 1);
+                                                    }
+                                                } else {
+                                                    throw e;
+                                                }
+                                            }
+                                        };
+                                        makeDirectory(directoryPath);
+                                    }
+                                }
+                            }
                         ]
                     },
                     {
