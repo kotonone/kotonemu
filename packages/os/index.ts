@@ -1341,6 +1341,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                             delete options.index["--verbose"];
                                         }
                                         const directoryPath = options.arguments[0];
+                                        // TODO: Change permission
                                         const mode = 0o777
                                         const makeDirectory = (path: string) => {
                                             try {
