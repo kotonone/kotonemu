@@ -1342,7 +1342,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                         }
                                         const directoryPath = options.arguments[0];
                                         // TODO: Change permission
-                                        const mode = 0o777
+                                        const mode = 0o777;
                                         const makeDirectory = (path: string) => {
                                             try {
                                                 this.mkdir(path, mode);
