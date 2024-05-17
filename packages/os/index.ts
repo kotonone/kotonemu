@@ -1352,7 +1352,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     if (options.index["-p"] === -1) {
                                                         lib.io.write(`mkdir: ディレクトリ '${path}' を作成できません: そのようなファイルやディレクトリはありません\n`, 2);
                                                     } else {
-                                                        this.mkdir(dirname(path), mode);
+                                                        makeDirectory(dirname(path));
 
                                                         // NOTE: -pがない場合はこっちに入らないので、throw以外で止まることを考慮する必要はない
                                                         this.mkdir(path, mode);
