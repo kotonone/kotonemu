@@ -252,3 +252,145 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
     };
     return returnOptionsData;
 }
+
+// TODO: どっか適切な場所に移動させるべき
+const BaseDirectoryMode = 0o0777;
+const BaseFileMode = 0o0666;
+const umask = 0o0022;
+/**
+ * chmod形式のmodeについてNumber型に変換します 
+ * TODO: badeModeについてデフォルト値は変える可能性
+ * 
+ * @param mode chmod形式のmode 
+ * @param isDirectory 対象がディレクトリなのかどうか (permissionのデフォルト値はディレクトリとファイルで異なるのでその判断に使用)
+ * @param baseMode 明確に指定する際のデフォルト値
+ * 
+ * @returns Number型に変換されたmode 問題のある場合-1が入ります)
+ */
+export function parsePermission(mode: string, isDirectory: boolean = false, baseMode: number = -1): number {
+    if (baseMode === -1) {
+        // NOTE: デフォルトの値はファイルなのかディレクトリなのかで変わる
+        if (isDirectory) baseMode = (BaseDirectoryMode ^ umask);
+        else baseMode = (BaseFileMode ^ umask);
+    }
+    if (mode === "") {
+        return -1;
+    }
+    if (/^[0-7]{1,4}$/.test(mode)) {
+        return parseInt(mode, 8);
+    }
+    let returnMode = baseMode;
+    const modifyModes = mode.split(",");
+    for(const modifyMode of modifyModes) {
+        const parsedModifyMode = modifyMode.match(/(^[ugoa]*)([=+-])([rwxXst]*$)/);
+        if (parsedModifyMode?.length === 4) {
+            const target = parsedModifyMode[1];
+            if (target === "") {
+                // TODO: 最初にugoaの指定がない場合umaskによって値が決まります
+                const umaskMode = umask ^ 0o7777;
+                let tempMode = 0o0000;
+                const modeFlags = parsedModifyMode[3];
+                if (modeFlags.includes("r")) tempMode += (umaskMode & 0o0444);
+                if (modeFlags.includes("w")) tempMode += (umaskMode & 0o0222);
+                if (modeFlags.includes("x")) tempMode += (umaskMode & 0o0111);
+                if (modeFlags.includes("s")) tempMode += (umaskMode & 0o6000);
+                if (modeFlags.includes("t")) tempMode += (umaskMode & 0o1000);
+                if (modeFlags.includes("X")) {
+                    if ((umaskMode & 0o0111) & returnMode) {
+                        tempMode += (umaskMode & 0o0111);
+                    }
+                }
+                if (parsedModifyMode[2] === "=") {
+                    returnMode = tempMode;
+                } else if (parsedModifyMode[2] === "+") {
+                    returnMode |= tempMode;
+                } else if (parsedModifyMode[2] === "-") {
+                    returnMode &= (tempMode ^ 0o7777);
+                }
+            } else {
+                // NOTE: スティッキービットは対象がどれであれ利用する
+                let mask = 0o1000;
+                if (target.includes("u") || target.includes("a")) {
+                    mask += 0o4700;
+                }
+                if (target.includes("g") || target.includes("a")) {
+                    mask += 0o2070;
+                }
+                if (target.includes("o") || target.includes("a")) {
+                    mask += 0o0007;
+                }
+
+                let tempMode = 0o0000;
+                const modeFlags = parsedModifyMode[3];
+                if (modeFlags.includes("r")) tempMode += (mask & 0o0444);
+                if (modeFlags.includes("w")) tempMode += (mask & 0o0222);
+                if (modeFlags.includes("x")) tempMode += (mask & 0o0111);
+                if (modeFlags.includes("s")) tempMode += (mask & 0o6000);
+                if (modeFlags.includes("t")) tempMode += (mask & 0o1000);
+                if (modeFlags.includes("X")) {
+                    if (0o0111 & returnMode) {
+                        tempMode += (mask & 0o0111);
+                    }
+                }
+
+                if (parsedModifyMode[2] === "=") {
+                    returnMode = tempMode;
+                } else if (parsedModifyMode[2] === "+") {
+                    returnMode |= tempMode;
+                } else if (parsedModifyMode[2] === "-") {
+                    returnMode &= (tempMode ^ 0o7777);
+                }
+            }
+        } else {
+            return -1;
+        }
+    }
+
+    return returnMode;
+}
+
+/**
+ * Number型で表されたmodeについてls -l形式に変換します
+ * 
+ * @param mode Number型のmode 
+ * 
+ * @returns ls -l形式のmode (ugoのそれぞれ3文字ずつの配列)
+ */
+export function detailsPermission(mode: number): [string, string, string] {
+    const returnMode: [string, string, string] = ["", "", ""];
+    returnMode[0] += (mode & 0o0400) ? "r" : "-";
+    returnMode[0] += (mode & 0o0200) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o4000);
+        const normalBit = (mode & 0o0100);
+        if (specialBit) {
+            returnMode[0] += normalBit ? "s" : "S";
+        } else {
+            returnMode[0] += normalBit ? "x" : "-";
+        }
+    }
+    returnMode[1] += (mode & 0o0040) ? "r" : "-";
+    returnMode[1] += (mode & 0o0020) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o2000);
+        const normalBit = (mode & 0o0010);
+        if (specialBit) {
+            returnMode[1] += normalBit ? "s" : "S";
+        } else {
+            returnMode[1] += normalBit ? "x" : "-";
+        }
+    }
+    returnMode[2] += (mode & 0o0040) ? "r" : "-";
+    returnMode[2] += (mode & 0o0020) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o1000);
+        const normalBit = (mode & 0o0001);
+        if (specialBit) {
+            returnMode[2] += normalBit ? "t" : "T";
+        } else {
+            returnMode[2] += normalBit ? "x" : "-";
+        }
+    }
+    
+    return returnMode;
+}
