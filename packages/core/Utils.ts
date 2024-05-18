@@ -258,8 +258,7 @@ const BaseDirectoryMode = 0o0777;
 const BaseFileMode = 0o0666;
 const umask = 0o0022;
 /**
- * chmod形式のmodeについてNumber型に変換します 
- * TODO: badeModeについてデフォルト値は変える可能性
+ * chmod形式のmodeについてNumber型に変換します
  * 
  * @param mode chmod形式のmode 
  * @param isDirectory 対象がディレクトリなのかどうか (permissionのデフォルト値はディレクトリとファイルで異なるのでその判断に使用)
@@ -286,7 +285,7 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
         if (parsedModifyMode?.length === 4) {
             const target = parsedModifyMode[1];
             if (target === "") {
-                // TODO: 最初にugoaの指定がない場合umaskによって値が決まります
+                // NOTE: 最初にugoaの指定がない場合umaskによって値が決まります
                 const umaskMode = umask ^ 0o7777;
                 let tempMode = 0o0000;
                 const modeFlags = parsedModifyMode[3];
