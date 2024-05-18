@@ -2,7 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
-import { basename, concatArrayBuffer, join, split, parseOptions, dirname } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split, parseOptions, dirname, parsePermission, detailsPermission } from "@/core/Utils";
 import { File } from "@/core/File";
 import { Stat } from "@/core/Process";
 
@@ -1216,7 +1216,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     } else/* if (stats[fileName].mode & StatMode.IFREG)*/ {
                                                         fileDetails += "-";
                                                     }
-                                                    fileDetails += `${(stats[fileName].mode & 0b100000000) ? "r" : "-"}${(stats[fileName].mode & 0b010000000) ? "w" : "-"}${(stats[fileName].mode & 0b001000000) ? "x" : "-"}${(stats[fileName].mode & 0b000100000) ? "r" : "-"}${(stats[fileName].mode & 0b000010000) ? "w" : "-"}${(stats[fileName].mode & 0b000001000) ? "x" : "-"}${(stats[fileName].mode & 0b000000100) ? "r" : "-"}${(stats[fileName].mode & 0b000000010) ? "w" : "-"}${(stats[fileName].mode & 0b000000001) ? "x" : "-"} ` ;
+                                                    fileDetails += `${detailsPermission(stats[fileName].mode).join("")} ` ;
 
                                                     if (options.index["-o"] === -1 && options.index["-G"] === -1) {
                                                         if (options.index["-n"] === -1) {
