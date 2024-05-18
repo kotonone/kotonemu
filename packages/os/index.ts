@@ -1340,9 +1340,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                             options.index["-b"] = Math.max(options.index["--verbose"], options.index["-b"]);
                                             delete options.index["--verbose"];
                                         }
-                                        const directoryPath = options.arguments[0];
+                                        const directoryPaths = options.arguments;
                                         // TODO: Change permission
-                                        const mode = 0o777;
+                                        const mode = 0o640;
                                         const makeDirectory = (path: string) => {
                                             try {
                                                 this.mkdir(path, mode);
@@ -1363,7 +1363,20 @@ There is NO WARRANTY, to the extent permitted by law.
                                                 }
                                             }
                                         };
-                                        makeDirectory(directoryPath);
+                                        for (const path of directoryPaths) {
+                                            try {
+                                                this.stat(path);
+
+                                                // NOTE: ENOENTが来なければ実行される
+                                                lib.io.write(`mkdir: ディレクトリ '${path}' を作成できません: ファイルが存在します\n`, 1);
+                                            } catch (e) {
+                                                if (e instanceof ENOENT) {
+                                                    makeDirectory(path);
+                                                } else {
+                                                    throw e;
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
