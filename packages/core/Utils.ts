@@ -278,7 +278,7 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
     if (/^[0-7]{1,4}$/.test(mode)) {
         return parseInt(mode, 8);
     }
-    let returnMode = baseMode;
+    let result = baseMode;
     const modifyModes = mode.split(",");
     for(const modifyMode of modifyModes) {
         const parsedModifyMode = modifyMode.match(/(^[ugoa]*)([=+-])([rwxXst]*$)/);
@@ -295,16 +295,16 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
                 if (modeFlags.includes("s")) tempMode += (umaskMode & 0o6000);
                 if (modeFlags.includes("t")) tempMode += (umaskMode & 0o1000);
                 if (modeFlags.includes("X")) {
-                    if (((umaskMode & 0o0111) & returnMode) || isDirectory) {
+                    if (((umaskMode & 0o0111) & result) || isDirectory) {
                         tempMode += (umaskMode & 0o0111);
                     }
                 }
                 if (parsedModifyMode[2] === "=") {
-                    returnMode = tempMode;
+                    result = tempMode;
                 } else if (parsedModifyMode[2] === "+") {
-                    returnMode |= tempMode;
+                    result |= tempMode;
                 } else if (parsedModifyMode[2] === "-") {
-                    returnMode &= (tempMode ^ 0o7777);
+                    result &= (tempMode ^ 0o7777);
                 }
             } else {
                 // NOTE: スティッキービットは対象がどれであれ利用する
@@ -327,17 +327,17 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
                 if (modeFlags.includes("s")) tempMode += (mask & 0o6000);
                 if (modeFlags.includes("t")) tempMode += (mask & 0o1000);
                 if (modeFlags.includes("X")) {
-                    if ((0o0111 & returnMode) || isDirectory) {
+                    if ((0o0111 & result) || isDirectory) {
                         tempMode += (mask & 0o0111);
                     }
                 }
 
                 if (parsedModifyMode[2] === "=") {
-                    returnMode = tempMode;
+                    result = tempMode;
                 } else if (parsedModifyMode[2] === "+") {
-                    returnMode |= tempMode;
+                    result |= tempMode;
                 } else if (parsedModifyMode[2] === "-") {
-                    returnMode &= (tempMode ^ 0o7777);
+                    result &= (tempMode ^ 0o7777);
                 }
             }
         } else {
@@ -345,7 +345,7 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
         }
     }
 
-    return returnMode;
+    return result;
 }
 
 /**
