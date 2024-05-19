@@ -355,40 +355,40 @@ export function parseMode(mode: string, isDirectory: boolean = false, initialMod
  * @returns ls -l形式のmode (ugoのそれぞれ3文字ずつの配列)
  */
 export function stringifyMode(mode: number): [string, string, string] {
-    const returnMode: [string, string, string] = ["", "", ""];
-    returnMode[0] += (mode & 0o0400) ? "r" : "-";
-    returnMode[0] += (mode & 0o0200) ? "w" : "-";
+    const resultMode: [string, string, string] = ["", "", ""];
+    resultMode[0] += (mode & 0o0400) ? "r" : "-";
+    resultMode[0] += (mode & 0o0200) ? "w" : "-";
     {
         const specialBit = (mode & 0o4000);
         const normalBit = (mode & 0o0100);
         if (specialBit) {
-            returnMode[0] += normalBit ? "s" : "S";
+            resultMode[0] += normalBit ? "s" : "S";
         } else {
-            returnMode[0] += normalBit ? "x" : "-";
+            resultMode[0] += normalBit ? "x" : "-";
         }
     }
-    returnMode[1] += (mode & 0o0040) ? "r" : "-";
-    returnMode[1] += (mode & 0o0020) ? "w" : "-";
+    resultMode[1] += (mode & 0o0040) ? "r" : "-";
+    resultMode[1] += (mode & 0o0020) ? "w" : "-";
     {
         const specialBit = (mode & 0o2000);
         const normalBit = (mode & 0o0010);
         if (specialBit) {
-            returnMode[1] += normalBit ? "s" : "S";
+            resultMode[1] += normalBit ? "s" : "S";
         } else {
-            returnMode[1] += normalBit ? "x" : "-";
+            resultMode[1] += normalBit ? "x" : "-";
         }
     }
-    returnMode[2] += (mode & 0o0004) ? "r" : "-";
-    returnMode[2] += (mode & 0o0002) ? "w" : "-";
+    resultMode[2] += (mode & 0o0004) ? "r" : "-";
+    resultMode[2] += (mode & 0o0002) ? "w" : "-";
     {
         const specialBit = (mode & 0o1000);
         const normalBit = (mode & 0o0001);
         if (specialBit) {
-            returnMode[2] += normalBit ? "t" : "T";
+            resultMode[2] += normalBit ? "t" : "T";
         } else {
-            returnMode[2] += normalBit ? "x" : "-";
+            resultMode[2] += normalBit ? "x" : "-";
         }
     }
     
-    return returnMode;
+    return resultMode;
 }
