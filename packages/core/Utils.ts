@@ -266,7 +266,7 @@ const umask = 0o0022;
  * 
  * @returns Number型に変換されたmode 問題のある場合-1が入ります)
  */
-export function parsePermission(mode: string, isDirectory: boolean = false, baseMode: number = -1): number {
+export function parseMode(mode: string, isDirectory: boolean = false, baseMode: number = -1): number {
     if (baseMode === -1) {
         // NOTE: デフォルトの値はファイルなのかディレクトリなのかで変わる
         if (isDirectory) baseMode = (BaseDirectoryMode ^ umask);
