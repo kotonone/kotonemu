@@ -355,40 +355,40 @@ export function parseMode(mode: string, isDirectory: boolean = false, initialMod
  * @returns ls -l形式のmode (ugoのそれぞれ3文字ずつの配列)
  */
 export function stringifyMode(mode: number): [string, string, string] {
-    const resultMode: [string, string, string] = ["", "", ""];
-    resultMode[0] += (mode & 0o0400) ? "r" : "-";
-    resultMode[0] += (mode & 0o0200) ? "w" : "-";
+    const result: [string, string, string] = ["", "", ""];
+    result[0] += (mode & 0o0400) ? "r" : "-";
+    result[0] += (mode & 0o0200) ? "w" : "-";
     {
         const specialBit = (mode & 0o4000);
         const normalBit = (mode & 0o0100);
         if (specialBit) {
-            resultMode[0] += normalBit ? "s" : "S";
+            result[0] += normalBit ? "s" : "S";
         } else {
-            resultMode[0] += normalBit ? "x" : "-";
+            result[0] += normalBit ? "x" : "-";
         }
     }
-    resultMode[1] += (mode & 0o0040) ? "r" : "-";
-    resultMode[1] += (mode & 0o0020) ? "w" : "-";
+    result[1] += (mode & 0o0040) ? "r" : "-";
+    result[1] += (mode & 0o0020) ? "w" : "-";
     {
         const specialBit = (mode & 0o2000);
         const normalBit = (mode & 0o0010);
         if (specialBit) {
-            resultMode[1] += normalBit ? "s" : "S";
+            result[1] += normalBit ? "s" : "S";
         } else {
-            resultMode[1] += normalBit ? "x" : "-";
+            result[1] += normalBit ? "x" : "-";
         }
     }
-    resultMode[2] += (mode & 0o0004) ? "r" : "-";
-    resultMode[2] += (mode & 0o0002) ? "w" : "-";
+    result[2] += (mode & 0o0004) ? "r" : "-";
+    result[2] += (mode & 0o0002) ? "w" : "-";
     {
         const specialBit = (mode & 0o1000);
         const normalBit = (mode & 0o0001);
         if (specialBit) {
-            resultMode[2] += normalBit ? "t" : "T";
+            result[2] += normalBit ? "t" : "T";
         } else {
-            resultMode[2] += normalBit ? "x" : "-";
+            result[2] += normalBit ? "x" : "-";
         }
     }
     
-    return resultMode;
+    return result;
 }
