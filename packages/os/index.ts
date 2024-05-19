@@ -2,7 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
-import { basename, concatArrayBuffer, join, split, parseOptions } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split, parseOptions, convertSizeToHumanReadable } from "@/core/Utils";
 import { File } from "@/core/File";
 import { Stat } from "@/core/Process";
 
@@ -615,9 +615,9 @@ There is NO WARRANTY, to the extent permitted by law.
                                     // TODO: Add more options (https://github.com/kotonone/kotonemu/pull/7#issuecomment-2081303265)
                                     let options = parseOptions(
                                         args,
-                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R", "-C", "-l", "-o", "-G", "-g", "-n"],
+                                        ["-F", "-A", "-a", "-r", "-1", "-m", "-Q", "-U", "-X", "-e", "-q", "-N", "-S", "-v", "-t", "-p", "-R", "-C", "-l", "-o", "-G", "-g", "-n", "-H"],
                                         [
-                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive", "--numeric-uid-gid", "--no-group",
+                                            "--help", "--version", "--all", "--almost-all", "--classify", "--quote-name", "--reverse", "--escape", "--hide-control-chars", "--show-control-chars", "--literal", "--file-type", "--recursive", "--numeric-uid-gid", "--no-group", "--human-readable",
                                             { "id": "--sort", "usesArgument": true, "needsArgument": true },
                                             { "id": "--quoting-style", "usesArgument": true, "needsArgument": true },
                                             { "id": "--indicator-style", "usesArgument": true, "needsArgument": true },
@@ -661,7 +661,7 @@ There is NO WARRANTY, to the extent permitted by law.
   -r, --reverse              並び順を反転させる
   -S                         ファイルのサイズで大きい順に並び替える
       --sort=WORD            名前の代わりに WORD にしたがって並び替える:
-                               none (-U), extension (-X)
+                               none (-U), size (-S), extension (-X)
   -t                         ファイルの更新時間で新しい順に並び替える
   -U                         要素を並び替えない
   -v                         テキスト内の(バージョン)番号で自然に並び替える
@@ -702,6 +702,10 @@ There is NO WARRANTY, to the extent permitted by law.
                                         if (options.index["--reverse"] !== -1) {
                                             options.index["-r"] = Math.max(options.index["--reverse"], options.index["-r"])
                                             delete options.index["--reverse"];
+                                        }
+                                        if (options.index["--human-readable"] !== -1) {
+                                            options.index["-h"] = Math.max(options.index["--human-readable"], options.index["-h"])
+                                            delete options.index["--human-readable"];
                                         }
 
 
@@ -746,7 +750,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     case "none":
                                                     case "extension":
                                                     case "time":
-                                                    case "extensizesion":
+                                                    case "size":
                                                     case "version":
                                                         if (options.index["--sort"] >= sortingType.index){
                                                             sortingType.type = options.optionsArguments["--sort"];
@@ -1029,7 +1033,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                             directories.push("./");
                                         }
                                         const sortFileList = (fileList : string[]) => {
-                                            // TODO: size, version, time
+                                            // TODO: version, time
                                             if (sortingType.type !== "none") {
                                                 if (sortingType.type === "extension") {
                                                     fileList.sort((a, b) => {
@@ -1072,6 +1076,10 @@ There is NO WARRANTY, to the extent permitted by law.
                                                                 return aExt.localeCompare(bExt);
                                                             }
                                                         }
+                                                    });
+                                                } else if (sortingType.type === "size") {
+                                                    fileList.sort((a, b) => {
+                                                        return this.lstat(b).size - this.lstat(a).size;
                                                     });
                                                 } else {
                                                     fileList.sort();
@@ -1219,6 +1227,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     fileDetails += `${(stats[fileName].mode & 0b100000000) ? "r" : "-"}${(stats[fileName].mode & 0b010000000) ? "w" : "-"}${(stats[fileName].mode & 0b001000000) ? "x" : "-"}${(stats[fileName].mode & 0b000100000) ? "r" : "-"}${(stats[fileName].mode & 0b000010000) ? "w" : "-"}${(stats[fileName].mode & 0b000001000) ? "x" : "-"}${(stats[fileName].mode & 0b000000100) ? "r" : "-"}${(stats[fileName].mode & 0b000000010) ? "w" : "-"}${(stats[fileName].mode & 0b000000001) ? "x" : "-"} ` ;
 
                                                     if (options.index["-o"] === -1 && options.index["-G"] === -1) {
+                                                        // TODO: ユーザー名のパディングができていない
                                                         if (options.index["-n"] === -1) {
                                                             fileDetails += `${groups[stats[fileName].group]} `;
                                                         } else {
@@ -1227,12 +1236,23 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     }
 
                                                     if (options.index["-g"] === -1) {
+                                                        // TODO: ユーザー名のパディングができていない
                                                         if (options.index["-n"] === -1) {
                                                             fileDetails += `${groups[stats[fileName].owner]} `;
                                                         } else {
                                                             fileDetails += `${stats[fileName].owner} `;
                                                         }
                                                     }
+
+                                                    // NOTE: ファイルサイズの追加
+                                                    if (options.index["-h"] === -1) {
+                                                        fileDetails += `${stats[fileName].size} `;
+                                                    } else {
+                                                        fileDetails += `${convertSizeToHumanReadable(stats[fileName].size)} `;
+                                                    }
+
+                                                    // TODO: fileDetails を廃止、配列に push していってあとで pad しながら join
+
                                                     fileData = fileDetails + fileData;
                                                 }
 
