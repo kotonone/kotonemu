@@ -143,7 +143,7 @@ export function split(content: string, variables: Record<string, string> = {}) {
 type oneHyphenOptionsList = (string | { id: string, needsArgument?: boolean })[];
 type twoHyphensOptionsList = (string | { id: string, usesArgument?: boolean, needsArgument?: boolean })[];
 type parseConfig = { stopInvalidOption: boolean; };
-type optionsData = { index: { [id: string]: number }, optionsArguments: { [id: string]: unknown }, lastOptionIndex: number, invalidOption?: string, arguments: string[] };
+type optionsData = { index: { [id: string]: number }, optionsArguments: { [id: string]: string }, lastOptionIndex: number, invalidOption?: string, arguments: string[] };
 /**
  * コマンドの引数からオプションについての情報を引き出します。   
  * 引数を受け付けないのに引数が含まれるオプションが見つかった場合はその時点で戻り値にinvalidOptionを含めてとして停止します。  
@@ -182,11 +182,12 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
         }
     }
 
-    const returnOptionsData: optionsData = { index:{}, optionsArguments:{}, lastOptionIndex: -1, arguments: []};
+    const returnOptionsData: optionsData = { index: {}, optionsArguments: {}, lastOptionIndex: -1, arguments: []};
     let optionsCount = 0;
     let needContinue = false
     let notConfigSince = false;
-    for (const arg of args) {
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
         if (returnOptionsData.invalidOption) {
             break;
         } else if (needContinue) {
@@ -216,8 +217,7 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     returnOptionsData.lastOptionIndex++;
                     if (optionName in optionInfomation && optionInfomation[optionName].usesArgument && optionInfomation[optionName].needsArgument) {
-                        returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
-                        needContinue = true
+                        returnOptionsData.optionsArguments[optionName] = args[++i]
                     }
                 } else {
                     returnOptionsData.invalidOption = optionName;
@@ -231,8 +231,7 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     if (optionName in optionInfomation && optionInfomation[optionName].needsArgument) {
                             if (i == arg.length - 1) {
-                                returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
-                                needContinue = true
+                                returnOptionsData.optionsArguments[optionName] = args[++i]
                             } else {
                                 returnOptionsData.optionsArguments[optionName] = arg.slice(i + 1);
                                 break;
@@ -251,4 +250,145 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
         }
     };
     return returnOptionsData;
+}
+
+// TODO: どっか適切な場所に移動させるべき
+const BaseDirectoryMode = 0o0777;
+const BaseFileMode = 0o0666;
+const umask = 0o0022;
+/**
+ * chmod形式のmodeについてNumber型に変換します
+ * 
+ * @param mode chmod形式のmode 
+ * @param isDirectory 対象がディレクトリなのかどうか (permissionのデフォルト値はディレクトリとファイルで異なるのでその判断に使用)
+ * @param initialMode 明確に指定する際のデフォルト値
+ * 
+ * @returns Number型に変換されたmode 問題のある場合-1が入ります)
+ */
+export function parseMode(mode: string, isDirectory: boolean = false, initialMode: number = -1): number {
+    if (initialMode === -1) {
+        // NOTE: デフォルトの値はファイルなのかディレクトリなのかで変わる
+        if (isDirectory) initialMode = (BaseDirectoryMode ^ umask);
+        else initialMode = (BaseFileMode ^ umask);
+    }
+    if (mode === "") {
+        return initialMode;
+    }
+    if (/^[0-7]{1,4}$/.test(mode)) {
+        return parseInt(mode, 8);
+    }
+    let result = initialMode;
+    const modifyModes = mode.split(",");
+    for(const modifyMode of modifyModes) {
+        const parsedModifyMode = modifyMode.match(/(^[ugoa]*)([=+-])([rwxXst]*$)/);
+        if (parsedModifyMode?.length === 4) {
+            const target = parsedModifyMode[1];
+            if (target === "") {
+                // NOTE: 最初にugoaの指定がない場合umaskによって値が決まります
+                const umaskMode = umask ^ 0o7777;
+                let tempMode = 0o0000;
+                const modeFlags = parsedModifyMode[3];
+                if (modeFlags.includes("r")) tempMode += (umaskMode & 0o0444);
+                if (modeFlags.includes("w")) tempMode += (umaskMode & 0o0222);
+                if (modeFlags.includes("x")) tempMode += (umaskMode & 0o0111);
+                if (modeFlags.includes("s")) tempMode += (umaskMode & 0o6000);
+                if (modeFlags.includes("t")) tempMode += (umaskMode & 0o1000);
+                if (modeFlags.includes("X")) {
+                    if (((umaskMode & 0o0111) & result) || isDirectory) {
+                        tempMode += (umaskMode & 0o0111);
+                    }
+                }
+                if (parsedModifyMode[2] === "=") {
+                    result = tempMode;
+                } else if (parsedModifyMode[2] === "+") {
+                    result |= tempMode;
+                } else if (parsedModifyMode[2] === "-") {
+                    result &= (tempMode ^ 0o7777);
+                }
+            } else {
+                // NOTE: スティッキービットは対象がどれであれ利用する
+                let mask = 0o1000;
+                if (target.includes("u") || target.includes("a")) {
+                    mask += 0o4700;
+                }
+                if (target.includes("g") || target.includes("a")) {
+                    mask += 0o2070;
+                }
+                if (target.includes("o") || target.includes("a")) {
+                    mask += 0o0007;
+                }
+
+                let tempMode = 0o0000;
+                const modeFlags = parsedModifyMode[3];
+                if (modeFlags.includes("r")) tempMode += (mask & 0o0444);
+                if (modeFlags.includes("w")) tempMode += (mask & 0o0222);
+                if (modeFlags.includes("x")) tempMode += (mask & 0o0111);
+                if (modeFlags.includes("s")) tempMode += (mask & 0o6000);
+                if (modeFlags.includes("t")) tempMode += (mask & 0o1000);
+                if (modeFlags.includes("X")) {
+                    if ((0o0111 & result) || isDirectory) {
+                        tempMode += (mask & 0o0111);
+                    }
+                }
+
+                if (parsedModifyMode[2] === "=") {
+                    result = tempMode;
+                } else if (parsedModifyMode[2] === "+") {
+                    result |= tempMode;
+                } else if (parsedModifyMode[2] === "-") {
+                    result &= (tempMode ^ 0o7777);
+                }
+            }
+        } else {
+            return -1;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Number型で表されたmodeについてls -l形式に変換します
+ * 
+ * @param mode Number型のmode 
+ * 
+ * @returns ls -l形式のmode (ugoのそれぞれ3文字ずつの配列)
+ */
+export function stringifyMode(mode: number): [string, string, string] {
+    const result: [string, string, string] = ["", "", ""];
+    result[0] += (mode & 0o0400) ? "r" : "-";
+    result[0] += (mode & 0o0200) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o4000);
+        const normalBit = (mode & 0o0100);
+        if (specialBit) {
+            result[0] += normalBit ? "s" : "S";
+        } else {
+            result[0] += normalBit ? "x" : "-";
+        }
+    }
+    result[1] += (mode & 0o0040) ? "r" : "-";
+    result[1] += (mode & 0o0020) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o2000);
+        const normalBit = (mode & 0o0010);
+        if (specialBit) {
+            result[1] += normalBit ? "s" : "S";
+        } else {
+            result[1] += normalBit ? "x" : "-";
+        }
+    }
+    result[2] += (mode & 0o0004) ? "r" : "-";
+    result[2] += (mode & 0o0002) ? "w" : "-";
+    {
+        const specialBit = (mode & 0o1000);
+        const normalBit = (mode & 0o0001);
+        if (specialBit) {
+            result[2] += normalBit ? "t" : "T";
+        } else {
+            result[2] += normalBit ? "x" : "-";
+        }
+    }
+    
+    return result;
 }
