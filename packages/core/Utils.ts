@@ -143,7 +143,7 @@ export function split(content: string, variables: Record<string, string> = {}) {
 type oneHyphenOptionsList = (string | { id: string, needsArgument?: boolean })[];
 type twoHyphensOptionsList = (string | { id: string, usesArgument?: boolean, needsArgument?: boolean })[];
 type parseConfig = { stopInvalidOption: boolean; };
-type optionsData = { index: { [id: string]: number }, optionsArguments: { [id: string]: unknown }, lastOptionIndex: number, invalidOption?: string, arguments: string[] };
+type optionsData = { index: { [id: string]: number }, optionsArguments: { [id: string]: string }, lastOptionIndex: number, invalidOption?: string, arguments: string[] };
 /**
  * コマンドの引数からオプションについての情報を引き出します。   
  * 引数を受け付けないのに引数が含まれるオプションが見つかった場合はその時点で戻り値にinvalidOptionを含めてとして停止します。  
@@ -182,11 +182,12 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
         }
     }
 
-    const returnOptionsData: optionsData = { index:{}, optionsArguments:{}, lastOptionIndex: -1, arguments: []};
+    const returnOptionsData: optionsData = { index: {}, optionsArguments: {}, lastOptionIndex: -1, arguments: []};
     let optionsCount = 0;
     let needContinue = false
     let notConfigSince = false;
-    for (const arg of args) {
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
         if (returnOptionsData.invalidOption) {
             break;
         } else if (needContinue) {
@@ -216,8 +217,7 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     returnOptionsData.lastOptionIndex++;
                     if (optionName in optionInfomation && optionInfomation[optionName].usesArgument && optionInfomation[optionName].needsArgument) {
-                        returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
-                        needContinue = true
+                        returnOptionsData.optionsArguments[optionName] = args[++i]
                     }
                 } else {
                     returnOptionsData.invalidOption = optionName;
@@ -231,8 +231,7 @@ export function parseOptions(args: string[], oneHyphen: oneHyphenOptionsList = [
                     returnOptionsData.index[optionName] = optionsCount++;
                     if (optionName in optionInfomation && optionInfomation[optionName].needsArgument) {
                             if (i == arg.length - 1) {
-                                returnOptionsData.optionsArguments[optionName] = args[++returnOptionsData.lastOptionIndex]
-                                needContinue = true
+                                returnOptionsData.optionsArguments[optionName] = args[++i]
                             } else {
                                 returnOptionsData.optionsArguments[optionName] = arg.slice(i + 1);
                                 break;
@@ -273,7 +272,7 @@ export function parseMode(mode: string, isDirectory: boolean = false, initialMod
         else initialMode = (BaseFileMode ^ umask);
     }
     if (mode === "") {
-        return -1;
+        return initialMode;
     }
     if (/^[0-7]{1,4}$/.test(mode)) {
         return parseInt(mode, 8);
@@ -379,8 +378,8 @@ export function stringifyMode(mode: number): [string, string, string] {
             returnMode[1] += normalBit ? "x" : "-";
         }
     }
-    returnMode[2] += (mode & 0o0040) ? "r" : "-";
-    returnMode[2] += (mode & 0o0020) ? "w" : "-";
+    returnMode[2] += (mode & 0o0004) ? "r" : "-";
+    returnMode[2] += (mode & 0o0002) ? "w" : "-";
     {
         const specialBit = (mode & 0o1000);
         const normalBit = (mode & 0o0001);
