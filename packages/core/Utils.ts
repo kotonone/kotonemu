@@ -295,7 +295,7 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
                 if (modeFlags.includes("s")) tempMode += (umaskMode & 0o6000);
                 if (modeFlags.includes("t")) tempMode += (umaskMode & 0o1000);
                 if (modeFlags.includes("X")) {
-                    if ((umaskMode & 0o0111) & returnMode) {
+                    if (((umaskMode & 0o0111) & returnMode) || isDirectory) {
                         tempMode += (umaskMode & 0o0111);
                     }
                 }
@@ -327,7 +327,7 @@ export function parsePermission(mode: string, isDirectory: boolean = false, base
                 if (modeFlags.includes("s")) tempMode += (mask & 0o6000);
                 if (modeFlags.includes("t")) tempMode += (mask & 0o1000);
                 if (modeFlags.includes("X")) {
-                    if (0o0111 & returnMode) {
+                    if ((0o0111 & returnMode) || isDirectory) {
                         tempMode += (mask & 0o0111);
                     }
                 }
