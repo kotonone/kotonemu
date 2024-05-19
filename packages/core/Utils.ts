@@ -355,7 +355,7 @@ export function parseMode(mode: string, isDirectory: boolean = false, initialMod
  * 
  * @returns ls -l形式のmode (ugoのそれぞれ3文字ずつの配列)
  */
-export function detailsPermission(mode: number): [string, string, string] {
+export function stringifyMode(mode: number): [string, string, string] {
     const returnMode: [string, string, string] = ["", "", ""];
     returnMode[0] += (mode & 0o0400) ? "r" : "-";
     returnMode[0] += (mode & 0o0200) ? "w" : "-";

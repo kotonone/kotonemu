@@ -2,7 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { EmulatorInit } from "@/core/Emulator";
 import { EISDIR, ELIBBAD, ENOENT, ENOTDIR } from "@/core/Error";
 import { OpenFlag, StatMode, StdReadFlag } from "@/core/Flags";
-import { basename, concatArrayBuffer, join, split, parseOptions, dirname, parsePermission, detailsPermission } from "@/core/Utils";
+import { basename, concatArrayBuffer, join, split, parseOptions, dirname, parseMode, stringifyMode } from "@/core/Utils";
 import { File } from "@/core/File";
 import { Stat } from "@/core/Process";
 
@@ -1216,7 +1216,7 @@ There is NO WARRANTY, to the extent permitted by law.
                                                     } else/* if (stats[fileName].mode & StatMode.IFREG)*/ {
                                                         fileDetails += "-";
                                                     }
-                                                    fileDetails += `${detailsPermission(stats[fileName].mode).join("")} ` ;
+                                                    fileDetails += `${stringifyMode(stats[fileName].mode).join("")} ` ;
 
                                                     if (options.index["-o"] === -1 && options.index["-G"] === -1) {
                                                         if (options.index["-n"] === -1) {
