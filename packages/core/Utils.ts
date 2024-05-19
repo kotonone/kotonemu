@@ -140,6 +140,42 @@ export function split(content: string, variables: Record<string, string> = {}) {
         );
 }
 
+/**
+ * サイズを人間が読みやすい単位に変換します。
+ * @param size サイズ
+ * @param si 1024 の代わりに 1000 を使用するか
+ */
+export function convertSizeToHumanReadable(size: number, si: boolean = true) {
+    /**
+     * 単位 {@link unit} における {@link size} をまとめて表示します。
+     * @param size サイズ
+     * @param unit 単位
+     */
+    function formatWithUnit(size: number, unit: string): string {
+        // NOTE: もし整数部分が1桁であれば、少数1桁までを丸めて表示する
+        if (Math.floor(size) < 10) {
+            return (Math.round(size * 10) / 10).toString() + unit;
+        } else {
+            return Math.round(size).toString() + unit;
+        }
+    }
+
+    const base = si ? 1000 : 1024;
+    if (size > base ** 5) {
+        return formatWithUnit(size / base ** 5, "P");
+    } else if (size > base ** 4) {
+        return formatWithUnit(size / base ** 4, "T");
+    } else if (size > base ** 3) {
+        return formatWithUnit(size / base ** 3, "G");
+    } else if (size > base ** 2) {
+        return formatWithUnit(size / base ** 2, "M");
+    } else if (size > base) {
+        return formatWithUnit(size / base, "K");
+    } else {
+        return formatWithUnit(size, "");
+    }
+}
+
 type oneHyphenOptionsList = (string | { id: string, needsArgument?: boolean })[];
 type twoHyphensOptionsList = (string | { id: string, usesArgument?: boolean, needsArgument?: boolean })[];
 type parseConfig = { stopInvalidOption: boolean; };

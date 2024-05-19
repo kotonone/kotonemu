@@ -344,7 +344,7 @@ export class Process {
             mode: entry.mode | mode,
             owner: entry.owner,
             group: entry.group,
-            size: 0, // TODO: size
+            size: isRegularFile(entry) ? entry.data.byteLength : 0,
             // TODO: ctime, atime, mtime
         };
     }
