@@ -262,15 +262,15 @@ const umask = 0o0022;
  * 
  * @param mode chmod形式のmode 
  * @param isDirectory 対象がディレクトリなのかどうか (permissionのデフォルト値はディレクトリとファイルで異なるのでその判断に使用)
- * @param baseMode 明確に指定する際のデフォルト値
+ * @param initialMode 明確に指定する際のデフォルト値
  * 
  * @returns Number型に変換されたmode 問題のある場合-1が入ります)
  */
-export function parseMode(mode: string, isDirectory: boolean = false, baseMode: number = -1): number {
-    if (baseMode === -1) {
+export function parseMode(mode: string, isDirectory: boolean = false, initialMode: number = -1): number {
+    if (initialMode === -1) {
         // NOTE: デフォルトの値はファイルなのかディレクトリなのかで変わる
-        if (isDirectory) baseMode = (BaseDirectoryMode ^ umask);
-        else baseMode = (BaseFileMode ^ umask);
+        if (isDirectory) initialMode = (BaseDirectoryMode ^ umask);
+        else initialMode = (BaseFileMode ^ umask);
     }
     if (mode === "") {
         return -1;
@@ -278,7 +278,7 @@ export function parseMode(mode: string, isDirectory: boolean = false, baseMode: 
     if (/^[0-7]{1,4}$/.test(mode)) {
         return parseInt(mode, 8);
     }
-    let result = baseMode;
+    let result = initialMode;
     const modifyModes = mode.split(",");
     for(const modifyMode of modifyModes) {
         const parsedModifyMode = modifyMode.match(/(^[ugoa]*)([=+-])([rwxXst]*$)/);
