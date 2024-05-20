@@ -48,7 +48,12 @@ export interface ProcessInit {
     args?: string[];
 
     /** プロセスの環境変数 */
-    env: Record<string, string>;
+    env: {
+        PWD: string;
+        PATH: string;
+        HOME: string;
+        [key: string]: string;
+    };
 
     /** ユーザー ID */
     uid: number;
@@ -78,7 +83,7 @@ export class Process {
     public args: string[];
 
     /** 環境変数 */
-    public env: Record<string, string>;
+    public env: ProcessInit["env"];
 
     /** 子プロセス */
     public children: Process[];
