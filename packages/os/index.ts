@@ -15,7 +15,7 @@ export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit,
             info: {
                 nodename: "kotonepc",
                 os_name: "ShalfeltOS",
-                os_version: "0.1.0"
+                os_version: "0.2.0"
             }
         },
         storage: [
