@@ -13,11 +13,10 @@ export default generateApplicationFile("fsh", async function(lib) {
         const command = split(text).filter(a => a !== "");
         if (command.length < 1) continue;
 
-        // TODO: user directory "~"
         // TODO: cd.sh: builtin cd "$@"
         if (command[0] === "cd") {
             if (command.length === 1) {
-                this.env.PWD = lib.path.absolute("~");
+                this.env.PWD = this.env.HOME;
             } else if (command.length === 2) {
                 try {
                     const stat = this.stat(command[1]);

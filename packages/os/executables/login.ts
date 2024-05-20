@@ -13,6 +13,8 @@ export default generateApplicationFile("login", async function (lib) {
     if (userId === "a" && password === "b") {
         lib.io.write("Last login: Wed Dec  9 04:09:57 on tty1\n");
 
+        this.env.HOME = "/root";
+
         await this.spawn(async function () {
             await this.exec("/bin/sh");
         });
