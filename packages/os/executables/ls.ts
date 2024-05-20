@@ -1,7 +1,7 @@
-import { parseOptions, stringifyMode } from "@/core/Utils";
-import { ENOENT, ENOTDIR } from "@/core/Error";
-import { Stat } from "@/core/Process";
-import { StatMode } from "@/core/Flags";
+import { parseOptions, stringifyMode } from "packages/kernel/Utils";
+import { ENOENT, ENOTDIR } from "packages/kernel/Error";
+import { Stat } from "packages/kernel/Process";
+import { StatMode } from "packages/kernel/Flags";
 import { generateApplicationFile } from "../Utils";
 
 // TODO: ユーザー名をOSで管理

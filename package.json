@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsup --entry.index packages/core/index.ts --entry.os packages/os/index.ts --dts --minify --format cjs,esm",
+    "build": "tsup --entry.index packages/kernel/index.ts --entry.os packages/os/index.ts --dts --minify --format cjs,esm",
     "prepublishOnly": "pnpm run build && node scripts/prepublishOnly.js",
     "postpublish": "node scripts/postpublish.js"
   },

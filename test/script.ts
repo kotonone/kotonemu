@@ -1,6 +1,6 @@
 import { Terminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
-import { Emulator } from "@/core/Emulator";
+import { Emulator } from "packages/kernel/Emulator";
 import ShalfeltOS from "@/os/index";
 
 const term = new Terminal({

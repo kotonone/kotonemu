@@ -1,4 +1,4 @@
-import { parseOptions, OpenFlag, ENOENT, EISDIR } from "../../core";
+import { parseOptions, OpenFlag, ENOENT, EISDIR } from "../../kernel";
 import { generateApplicationFile } from "../Utils";
 
 export default generateApplicationFile("cat", async function(lib) {

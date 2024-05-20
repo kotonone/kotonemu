@@ -1,6 +1,6 @@
 import { Terminal } from "@xterm/xterm";
-import { EmulatorInit } from "@/core/Emulator";
-import { File } from "@/core/File";
+import { EmulatorInit } from "packages/kernel/Emulator";
+import { File } from "packages/kernel/File";
 import fsh from "./executables/fsh";
 import cat from "./executables/cat";
 import ls from "./executables/ls";

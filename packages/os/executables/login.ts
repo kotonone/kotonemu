@@ -1,4 +1,4 @@
-import { StdReadFlag } from "@/core/Flags";
+import { StdReadFlag } from "packages/kernel/Flags";
 import { generateApplicationFile } from "../Utils";
 
 export default generateApplicationFile("login", async function (lib) {

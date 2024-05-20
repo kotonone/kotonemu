@@ -1,4 +1,4 @@
-import { basename, split, StatMode, parseOptions, join, ENOENT, EISDIR, ELIBBAD } from "../../core";
+import { basename, split, StatMode, parseOptions, join, ENOENT, EISDIR, ELIBBAD } from "../../kernel";
 import { generateApplicationFile } from "../Utils";
 
 export default generateApplicationFile("fsh", async function(lib) {

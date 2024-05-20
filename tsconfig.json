@@ -8,7 +8,7 @@
         "strict": true,
         "noImplicitOverride": true,
         "paths": {
-            "@/core/*": ["./packages/core/*"],
+            "@/kernel/*": ["packages/kernel/*"],
             "@/os/*": ["./packages/os/*"]
         }
     },

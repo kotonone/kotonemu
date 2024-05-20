@@ -1,4 +1,4 @@
-import { ExecutableFile } from "@/core/File";
+import { ExecutableFile } from "packages/kernel/File";
 
 /**
  * アプリケーションの実行可能ファイルを作成します。

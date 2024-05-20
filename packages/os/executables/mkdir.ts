@@ -1,5 +1,5 @@
-import { dirname, parseMode, parseOptions } from "@/core/Utils";
-import { ENOENT } from "@/core/Error";
+import { dirname, parseMode, parseOptions } from "packages/kernel/Utils";
+import { ENOENT } from "packages/kernel/Error";
 import { generateApplicationFile } from "../Utils";
 
 export default generateApplicationFile("mkdir", async function (lib) {
