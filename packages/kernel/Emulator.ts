@@ -54,7 +54,9 @@ export class Emulator {
         name: "kernel",
         tty: this.DEFAULT_TTY,
         env: {
-            PWD: "/"
+            PWD: "/",
+            PATH: "/bin:/sbin",
+            HOME: "/"
         },
         uid: 0,
         gid: 0
