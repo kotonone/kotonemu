@@ -6,6 +6,11 @@ import { join } from "./Utils";
 /*
 NOTE: 実装されている機能における Linux との相違点
 
+* ブートローダーは存在しません。
+    sysvinit や systemd コマンドが実行された時点からの挙動をエミュレーションするように作成されています。
+* カーネルパラメータが大幅に変更されています。
+    カーネルが読み込む init コマンドのパスなどを変更できます。
+    これは、既存の Linux の形式に沿わない OS を作成する際に有用です。
 * mkdir に recursive オプションが存在します。
 * fork システムコールは存在しません。代わりに spawn システムコールを使用してください。
     このシステムコールは疑似的なものであり、プロセスを生成するためもしくは微小なタスクを別プロセスで行う必要があるときのみに使用するべきです。
@@ -16,20 +21,14 @@ NOTE: 実装されている機能における Linux との相違点
 * exec システムコールにおいて、　argv と envp の引数名と内容が変更されています。
 */
 
-export interface EmulatorInit {
-    info?: EmulatorInfo;
-}
-
-/** エミュレーター情報インタフェース */
-export interface EmulatorInfo {
-    /** マシン名 */
-    nodename: string;
-
-    /** OS名 */
-    os_name: string;
-
-    /** OS バージョン */
-    os_version: string;
+export interface BootOptions {
+    kernel: {
+        parameters: {
+            "kernel.hostname": string;
+            "kernel.ostype": string;
+            "kernel.osrelease": string;
+        };
+    };
 }
 
 /** 端末エミュレーター */
@@ -63,15 +62,10 @@ export class Emulator {
     });
     public newPid: number = 1;
 
-    /** エミュレーター情報 */
-    public info: EmulatorInfo;
+    public parameters: BootOptions["kernel"]["parameters"];
 
-    public constructor(config: EmulatorInit, storage: File[]) {
-        this.info = config.info ?? <EmulatorInfo>{
-            nodename: "kotonemu",
-            os_name: "Kotonemu",
-            os_version: "1.0.0"
-        };
+    public constructor(options: BootOptions, storage: File[]) {
+        this.parameters = options.kernel.parameters;
         this.storage.children = storage;
     }
 

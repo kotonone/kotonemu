@@ -1,4 +1,4 @@
-import { Emulator, EmulatorInfo } from "./Emulator";
+import { Emulator } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL, EACCES } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
 import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
@@ -14,6 +14,18 @@ export interface Stat {
     group: number;
     /** ファイルサイズ */
     size: number;
+}
+
+/** エミュレーター情報インタフェース */
+export interface EmulatorInfo {
+    /** マシン名 */
+    nodename: string;
+
+    /** OS名 */
+    os_name: string;
+
+    /** OS バージョン */
+    os_version: string;
 }
 
 export type FileDescriptorData = {
@@ -48,12 +60,12 @@ export interface ProcessInit {
     args?: string[];
 
     /** プロセスの環境変数 */
-    env: {
+    env: Partial<{
         PWD: string;
         PATH: string;
         HOME: string;
         [key: string]: string;
-    };
+    }>;
 
     /** ユーザー ID */
     uid: number;
@@ -463,7 +475,7 @@ export class Process {
      * @param linkpath シンボリックリンクの名前
      */
     public symlink(target: string, linkpath: string): void {
-        this._createEntry(this.env.PWD, <SymbolicLink>{
+        this._createEntry(this.env.PWD ?? "/", <SymbolicLink>{
             name: linkpath,
             type: "symlink",
             owner: 0,
@@ -490,7 +502,11 @@ export class Process {
      * 稼働中のエミュレーターについての名前と情報を取得します。
      */
     public uname(): EmulatorInfo {
-        return this.emulator.info;
+        return {
+            nodename: this.emulator.parameters["kernel.hostname"],
+            os_name: this.emulator.parameters["kernel.ostype"],
+            os_version: this.emulator.parameters["kernel.osrelease"]
+        };
     }
 
     private _chown(entry: IFile, owner: number, group: number): void {
@@ -597,8 +613,9 @@ export class Process {
         const processDir = join(this.emulator.PROCESS_DIRECTORY, process.id.toString());
 
         process.mkdir(join(processDir, "fd"), 0o555, true);
+        // TODO: procfs
+        // TODO: /proc/sys
         // TODO: /proc/self
-        // TODO: /proc 配下を動的に生成
         // TODO: /proc/self/fdinfo
         process.open(process.tty, OpenFlag.READ);
         process.open(process.tty, OpenFlag.WRITE);
@@ -616,13 +633,13 @@ export class Process {
      * @param args 引数
      * @param env 環境変数
      */
-    public async exec(pathname: string, args: string[] = [], env: Record<string, string> = {}): Promise<any> {
+    public async exec(pathname: string, args: string[] = [], env: Partial<ProcessInit["env"]> = {}): Promise<any> {
         const entry = this._getEntryFromPathname(pathname, true);
 
         this.name = pathname;
         // TODO: deep copy
         this.args = args;
-        this.env = { ...this.env, ...env };
+        this.env = Object.assign(this.env, Object.fromEntries(Object.entries(env).filter(([k, v]) => v !== undefined)));
 
         if (isExecutableFile(entry)) {
             // TODO: permission check

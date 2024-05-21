@@ -1,5 +1,5 @@
 import { Terminal } from "@xterm/xterm";
-import { EmulatorInit } from "packages/kernel/Emulator";
+import { BootOptions } from "packages/kernel/Emulator";
 import { File } from "packages/kernel/File";
 import fsh from "./executables/fsh";
 import cat from "./executables/cat";
@@ -9,13 +9,15 @@ import login from "./executables/login";
 import init from "./executables/system/init";
 
 /** ShalfeltOS を生成します。 */
-export default function ShalfeltOS(terminal: Terminal): { options: EmulatorInit, storage: File[] } {
+export default function ShalfeltOS(terminal: Terminal): { options: BootOptions, storage: File[] } {
     return {
         options: {
-            info: {
-                nodename: "kotonepc",
-                os_name: "ShalfeltOS",
-                os_version: "0.2.0"
+            kernel: {
+                parameters: {
+                    "kernel.hostname": "kotonepc",
+                    "kernel.ostype": "ShalfeltOS",
+                    "kernel.osrelease": "0.2.0",
+                }
             }
         },
         storage: [

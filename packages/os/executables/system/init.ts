@@ -10,7 +10,8 @@ export default (terminal: Terminal) => generateApplicationFile("init", async fun
         await this.spawn(async function () {
             await this.exec("/bin/login", [], {
                 PWD: "/",
-                PATH: "/bin:/sbin"
+                PATH: "/bin:/sbin",
+                HOME: "/"
             });
         });
     } catch (e) {
