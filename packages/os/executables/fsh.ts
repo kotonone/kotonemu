@@ -5,7 +5,7 @@ export default generateApplicationFile("fsh", async function(lib) {
     const info = this.uname();
 
     while (true) {
-        lib.io.write(`[kotone@${info.nodename} ${basename(this.env.PWD)}]$ `);
+        lib.io.write(`[kotone@${info.nodename} ${basename(this.env.PWD!)}]$ `);
 
         const text = (await lib.io.read()).trimEnd();
         if (text.trim() === "") continue;
@@ -48,13 +48,13 @@ export default generateApplicationFile("fsh", async function(lib) {
                         if (this.env.PWD === "/") {
                             lib.io.write("/\n", 1);
                         } else {
-                            const pwdPath = this.env.PWD.split("/");
+                            const pwdPath = this.env.PWD!.split("/");
                             let isSymbolic = false;
                             for (let i = 0; i < pwdPath.length - 1; i++) {
                                 isSymbolic = !!(this.lstat(pwdPath.slice(0, -i ? -i : pwdPath.length).join("/")).mode & StatMode.IFLNK);
                                 if (isSymbolic) {
                                     if (i === 0) {
-                                        lib.io.write(this.readlink(this.env.PWD) + "\n", 1);
+                                        lib.io.write(this.readlink(this.env.PWD!) + "\n", 1);
                                     } else {
                                         lib.io.write(this.readlink(pwdPath.slice(0, -i).join("/")) + "/" + pwdPath.slice(-i).join("/") + "\n", 1);
                                     }
