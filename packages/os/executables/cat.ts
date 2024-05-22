@@ -1,7 +1,7 @@
 import { parseOptions, OpenFlag, ENOENT, EISDIR } from "../../kernel";
 import { generateApplicationFile } from "../Utils";
 
-export default generateApplicationFile("cat", async function(lib) {
+export default generateApplicationFile(async function(lib) {
     const args = this.args;
     let options = parseOptions(
         args,

@@ -16,7 +16,7 @@ const groups: {
     0: "root"
 };
 
-export default generateApplicationFile("ls", async function(lib) {
+export default generateApplicationFile(async function(lib) {
     const args = this.args;
     // TODO: Add more options (https://github.com/kotonone/kotonemu/pull/7#issuecomment-2081303265)
     let options = parseOptions(

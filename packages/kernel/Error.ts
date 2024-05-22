@@ -47,6 +47,14 @@ export class ENOENT extends OSError {
     }
 }
 
+/** ファイルもしくはディレクトリが既に存在するエラー */
+export class EEXIST extends OSError {
+    constructor(entryName: string) {
+        super();
+        this.message = "Entry already exists: " + entryName;
+    }
+}
+
 /** ディレクトリではないエラー */
 export class ENOTDIR extends OSError {
     constructor(entryName: string) {

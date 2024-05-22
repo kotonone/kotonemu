@@ -1,7 +1,7 @@
 import { StdReadFlag } from "packages/kernel/Flags";
 import { generateApplicationFile } from "../Utils";
 
-export default generateApplicationFile("login", async function (lib) {
+export default generateApplicationFile(async function (lib) {
     const info = this.uname();
 
     lib.io.write(`${info.nodename} login: `);

@@ -1,6 +1,7 @@
 import { Emulator } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL, EACCES } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
+import { Filesystem, FilesystemSession } from "./Filesystem";
 import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
 import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
 
@@ -56,6 +57,9 @@ export interface ProcessInit {
     /** ファイルディスクリプタ */
     fd?: FileDescriptorData[];
 
+    /** ファイルシステム */
+    filesystem: FilesystemSession;
+
     /** プロセスに与えられた引数 */
     args?: string[];
 
@@ -91,6 +95,9 @@ export class Process {
     /** ファイルディスクリプタ */
     public fd: FileDescriptorData[];
 
+    /** ファイルシステム */
+    public filesystem: FilesystemSession;
+
     /** 引数 */
     public args: string[];
 
@@ -114,6 +121,7 @@ export class Process {
         this.tty = process.tty;
         this.fd = process.fd ?? [];
         this.children = [];
+        this.filesystem = process.filesystem.getSession(this);
         this.args = process.args ?? [];
         this.env = process.env;
         this.uid = 0;
@@ -146,62 +154,6 @@ export class Process {
         return fdData;
     }
     /**
-     * エントリ名を使用して子エントリを取得します。
-     * @param entry 親エントリ
-     * @param name 子エントリ名
-     */
-    private _getEntry(entry: Directory, name: string): IFile | null {
-        const e = entry.children.find(e => e.name === name);
-        if (e && e.deleted) return null;
-        return e ?? null;
-    }
-    /**
-     * パス名を使用してエントリを取得します。
-     * @param pathname パス名
-     * @param resolveSymlinkAsFile シンボリックリンクが参照された際、リンク先を参照するかどうか
-     */
-    private _getEntryFromPathname(pathname: string, resolveSymlinkAsFile: boolean = false): IFile {
-        let pointer: IFile = this.emulator.storage;
-
-        const entryNames = resolve(pathname, this.env.PWD);
-
-        for (const p of entryNames) {
-            if (isSymbolicLink(pointer)) {
-                pointer = this._getEntryFromPathname(pointer.target);
-            }
-            if (!isDirectory(pointer)) {
-                throw new ENOENT(pathname);
-            }
-
-            const entry: Directory | IFile | null = this._getEntry(pointer ?? this.emulator.storage, p);
-            if (entry === null) {
-                throw new ENOENT(pathname);
-            } else {
-                pointer = entry;
-            }
-        }
-
-        if (resolveSymlinkAsFile && isSymbolicLink(pointer)) {
-            pointer = this._getEntryFromPathname(pointer.target, true);
-        }
-
-        return pointer;
-    }
-    /**
-     * エントリを作成します。
-     * @param parent 作成するエントリの親エントリ
-     * @param entry 作成するエントリオブジェクト
-     */
-    private _createEntry<E extends File>(parent: Directory | string, entry: E): void {
-        const parentEntry = typeof parent === "string" ? this._getEntryFromPathname(parent) : parent;
-
-        if (!isDirectory(parentEntry)) {
-            throw new ENOTDIR(typeof parent === "string" ? parent : "(unknown path)/" + parent.name);
-        }
-
-        parentEntry.children.push(entry);
-    }
-    /**
      * 指定されたエントリにおいて、指定されたモードの権限が有効になっているか確認します。
      * @param entry エントリ
      * @param mode モード（0 - 7 で指定）
@@ -227,13 +179,13 @@ export class Process {
     public open(pathname: string, flags: OpenFlag = 0 as OpenFlag): number {
         let entry;
         try {
-            entry = this._getEntryFromPathname(pathname, true);
+            entry = this.filesystem.get(resolve(pathname, this.env.PWD));
         } catch (e) {
             if (flags & OpenFlag.WRITE && e instanceof ENOENT) {
-                const parentEntry = this._getEntryFromPathname(dirname(pathname));
+                const parentEntry = this.filesystem.get(dirname(pathname));
                 if (!this._isPermitted(parentEntry, 0o2)) throw new EACCES();
 
-                this._createEntry(dirname(pathname), <RegularFile>{
+                this.filesystem.create(dirname(pathname), <RegularFile>{
                     name: basename(pathname),
                     type: "regular-file",
                     // TODO: permission
@@ -244,7 +196,7 @@ export class Process {
                     data: new ArrayBuffer(0)
                 });
 
-                entry = this._getEntryFromPathname(pathname, true);
+                entry = this.filesystem.get(pathname, true);
             } else {
                 throw e;
             }
@@ -259,7 +211,7 @@ export class Process {
         if (flags & OpenFlag.WRITE && !this._isPermitted(entry, 0o2)) throw new EACCES();
 
         const fd = this._createFileDescriptor(pathname, flags);
-        this._createEntry(join(this.emulator.PROCESS_DIRECTORY, this.id.toString(), "fd"), <SymbolicLink>{
+        this.filesystem.create(join(this.emulator.PROCESS_DIRECTORY, this.id.toString(), "fd"), <SymbolicLink>{
             name: fd.id.toString(),
             type: "symlink",
             owner: 0,
@@ -305,7 +257,7 @@ export class Process {
             throw new EBADFD();
         }
 
-        const entry = this._getEntryFromPathname(fdd.pathname, true);
+        const entry = this.filesystem.get(fdd.pathname, true);
         if (isDirectory(entry)) {
             throw new EISDIR(fdd.pathname);
         }
@@ -334,7 +286,7 @@ export class Process {
             throw new EBADFD();
         }
 
-        const entry = this._getEntryFromPathname(fdd.pathname, true);
+        const entry = this.filesystem.get(fdd.pathname, true);
         if (isDirectory(entry)) {
             throw new EISDIR(fdd.pathname);
         }
@@ -370,7 +322,7 @@ export class Process {
      * @param pathname パス名
      */
     public stat(pathname: string): Stat {
-        return this._stat(this._getEntryFromPathname(pathname, true));
+        return this._stat(this.filesystem.get(pathname, true));
     }
     /**
      * ファイルディスクリプタからファイルの状態を取得します。
@@ -378,7 +330,7 @@ export class Process {
      */
     public fstat(fd: number): Stat {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this._getEntryFromPathname(fdd.pathname);
+        const entry = this.filesystem.get(fdd.pathname);
         return this._stat(entry);
     }
     /**
@@ -386,7 +338,7 @@ export class Process {
      * @param pathname パス名
      */
     public lstat(pathname: string): Stat {
-        return this._stat(this._getEntryFromPathname(pathname));
+        return this._stat(this.filesystem.get(pathname));
     }
 
     /**
@@ -395,23 +347,20 @@ export class Process {
      * @param flags フラグ
      */
     public unlink(pathname: string, flags: UnlinkFlag = 0 as UnlinkFlag): void {
-        const entry = this._getEntryFromPathname(pathname);
+        const entry = this.filesystem.get(pathname);
         if (flags & UnlinkFlag.REMOVE_DIR) {
             if (!isDirectory(entry)) {
                 throw new ENOTDIR(pathname);
             }
 
-            entry.children.forEach(c => {
-                c.deleted = true;
-                // TODO: 子エントリに fd がある場合でも親だけ削除し参照が途切れてしまう、これでも fd がある場合維持ということになっているからよいか？
-            });
+            this.filesystem.delete(pathname, true);
         } else {
             if (isDirectory(entry)) {
                 throw new EISDIR(pathname);
             }
         }
 
-        entry.deleted = true;
+        this.filesystem.delete(pathname, false);
     }
 
     /**
@@ -422,7 +371,7 @@ export class Process {
      */
     public mkdir(pathname: string, mode: number, recursive: boolean = false): void {
         try {
-            this._createEntry(dirname(pathname), <Directory>{
+            this.filesystem.create(dirname(pathname), <Directory>{
                 name: basename(pathname),
                 type: "directory",
                 owner: 0,
@@ -445,28 +394,23 @@ export class Process {
      * @param pathname パス名
      */
     public readdir(pathname: string): string[] {
-        const entry = this._getEntryFromPathname(pathname, true);
-        if (!isDirectory(entry)) {
-            throw new ENOTDIR(pathname);
-        }
-
-        return entry.children.filter(c => !c.deleted).map(c => c.name);
+        return this.filesystem.list(pathname);
     }
     /**
      * ディレクトリを削除します。
      * @param pathname パス名
      */
     public rmdir(pathname: string): void {
-        const entry = this._getEntryFromPathname(pathname);
+        const entry = this.filesystem.get(pathname);
         if (!isDirectory(entry)) {
             throw new ENOTDIR(pathname);
         }
 
-        if (entry.children.length > 0) {
+        if (this.filesystem.list(pathname).length > 0) {
             throw new ENOTEMPTY(pathname);
         }
 
-        entry.deleted = true;
+        this.filesystem.delete(pathname);
     }
 
     /**
@@ -475,7 +419,7 @@ export class Process {
      * @param linkpath シンボリックリンクの名前
      */
     public symlink(target: string, linkpath: string): void {
-        this._createEntry(this.env.PWD ?? "/", <SymbolicLink>{
+        this.filesystem.create(this.env.PWD ?? "/", <SymbolicLink>{
             name: linkpath,
             type: "symlink",
             owner: 0,
@@ -490,7 +434,7 @@ export class Process {
      * @param pathname パス名
      */
     public readlink(pathname: string): string {
-        const entry = this._getEntryFromPathname(pathname);
+        const entry = this.filesystem.get(pathname);
         if (isSymbolicLink(entry)) {
             return entry.target;
         } else {
@@ -520,7 +464,7 @@ export class Process {
      * @param group グループ ID (GID)
      */
     public chown(pathname: string, owner: number, group: number): void {
-        return this._chown(this._getEntryFromPathname(pathname, true), owner, group);
+        return this._chown(this.filesystem.get(pathname, true), owner, group);
     }
     /**
      * ファイルディスクリプタからファイルの所有権を変更します。
@@ -530,7 +474,7 @@ export class Process {
      */
     public fchown(fd: number, owner: number, group: number): void {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this._getEntryFromPathname(fdd.pathname);
+        const entry = this.filesystem.get(fdd.pathname);
         return this._chown(entry, owner, group);
     }
     /**
@@ -540,7 +484,7 @@ export class Process {
      * @param group グループ ID (GID)
      */
     public lchown(pathname: string, owner: number, group: number): void {
-        return this._chown(this._getEntryFromPathname(pathname), owner, group);
+        return this._chown(this.filesystem.get(pathname), owner, group);
     }
 
     private _chmod(entry: IFile, mode: number): void {
@@ -552,7 +496,7 @@ export class Process {
      * @param mode モード
      */
     public chmod(pathname: string, mode: number): void {
-        return this._chmod(this._getEntryFromPathname(pathname, true), mode);
+        return this._chmod(this.filesystem.get(pathname, true), mode);
     }
     /**
      * ファイルディスクリプタからファイルの権限を変更します。
@@ -561,7 +505,7 @@ export class Process {
      */
     public fchmod(fd: number, mode: number): void {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this._getEntryFromPathname(fdd.pathname);
+        const entry = this.filesystem.get(fdd.pathname);
         return this._chmod(entry, mode);
     }
 
@@ -603,6 +547,7 @@ export class Process {
             id: this.emulator.newPid,
             name: "New Process",
             tty: this.tty,
+            filesystem: this.filesystem,
             env: this.env,
             uid: this.uid,
             gid: this.gid
@@ -610,21 +555,8 @@ export class Process {
         this.emulator.newPid++;
         this.children.push(process);
 
-        const processDir = join(this.emulator.PROCESS_DIRECTORY, process.id.toString());
-
-        process.mkdir(join(processDir, "fd"), 0o555, true);
-        // TODO: procfs
-        // TODO: /proc/sys
-        // TODO: /proc/self
-        // TODO: /proc/self/fdinfo
-        process.open(process.tty, OpenFlag.READ);
-        process.open(process.tty, OpenFlag.WRITE);
-        process.open(process.tty, OpenFlag.WRITE);
-
         await callback.bind(process)();
         this.children = this.children.filter(p => p.id !== process.id);
-
-        this.unlink(processDir, UnlinkFlag.REMOVE_DIR);
     }
 
     /**
@@ -634,7 +566,7 @@ export class Process {
      * @param env 環境変数
      */
     public async exec(pathname: string, args: string[] = [], env: Partial<ProcessInit["env"]> = {}): Promise<any> {
-        const entry = this._getEntryFromPathname(pathname, true);
+        const entry = this.filesystem.get(pathname, true);
 
         this.name = pathname;
         // TODO: deep copy

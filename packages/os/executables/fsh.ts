@@ -1,7 +1,7 @@
 import { basename, split, StatMode, parseOptions, join, ENOENT, EISDIR, ELIBBAD } from "../../kernel";
 import { generateApplicationFile } from "../Utils";
 
-export default generateApplicationFile("fsh", async function(lib) {
+export default generateApplicationFile(async function(lib) {
     const info = this.uname();
 
     while (true) {

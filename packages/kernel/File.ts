@@ -1,11 +1,10 @@
+import { Filesystem } from "./Filesystem";
 import { Process } from "./Process";
 
 export interface IFile {
-    name: string;
     owner: number;
     group: number;
     mode: number;
-    deleted: boolean;
 }
 
 export interface RegularFile extends IFile {
@@ -16,7 +15,6 @@ export interface RegularFile extends IFile {
 export interface ExecutableFile extends IFile {
     type: "executable-file";
     data?: ArrayBuffer;
-    protected: boolean;
 
     onStart(this: Process, lib: {
         io: {
@@ -42,12 +40,17 @@ export interface SymbolicLink extends IFile {
     target: string;
 }
 
-export interface Directory extends IFile {
-    type: "directory";
-    children: File[];
+export interface FilesystemFile extends IFile {
+    type: "filesystem";
+
+    target: Filesystem;
 }
 
-export type File = RegularFile | ExecutableFile | DeviceFile | SymbolicLink | Directory;
+export interface Directory extends IFile {
+    type: "directory";
+}
+
+export type File = RegularFile | ExecutableFile | DeviceFile | SymbolicLink | FilesystemFile | Directory;
 
 export function getFileType(value: IFile): string {
     return "type" in value ? <string>value.type : "unknown";
@@ -63,6 +66,9 @@ export function isDeviceFile(value: IFile): value is DeviceFile {
 }
 export function isSymbolicLink(value: IFile): value is SymbolicLink {
     return getFileType(value) === "symlink";
+}
+export function isFilesystemFile(value: IFile): value is FilesystemFile {
+    return getFileType(value) === "filesystem";
 }
 export function isDirectory(value: IFile): value is Directory {
     return getFileType(value) === "directory";

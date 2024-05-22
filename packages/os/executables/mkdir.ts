@@ -2,7 +2,7 @@ import { dirname, parseMode, parseOptions } from "packages/kernel/Utils";
 import { ENOENT } from "packages/kernel/Error";
 import { generateApplicationFile } from "../Utils";
 
-export default generateApplicationFile("mkdir", async function (lib) {
+export default generateApplicationFile(async function (lib) {
     const args = this.args;
     let options = parseOptions(
         args,

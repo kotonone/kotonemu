@@ -1,7 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { generateApplicationFile } from "../../Utils";
 
-export default (terminal: Terminal) => generateApplicationFile("init", async function (lib) {
+export default (terminal: Terminal) => generateApplicationFile(async function (lib) {
     try {
         const info = this.uname();
         lib.io.write(`\n${info.os_name} ${info.os_version}\n`);
