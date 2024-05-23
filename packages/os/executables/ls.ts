@@ -1,7 +1,7 @@
-import { parseOptions, stringifyMode } from "packages/kernel/Utils";
-import { ENOENT, ENOTDIR } from "packages/kernel/Error";
-import { Stat } from "packages/kernel/Process";
-import { StatMode } from "packages/kernel/Flags";
+import { join, parseOptions, stringifyMode } from "@/kernel/Utils";
+import { ENOENT, ENOTDIR } from "@/kernel/Error";
+import { Stat } from "@/kernel/Process";
+import { StatMode } from "@/kernel/Flags";
 import { generateApplicationFile } from "../Utils";
 
 // TODO: ユーザー名をOSで管理
@@ -433,7 +433,7 @@ There is NO WARRANTY, to the extent permitted by law.
 
         let directories = options.arguments;
         if (directories.length === 0) {
-            directories.push("./");
+            directories.push(this.env.PWD!);
         }
         const sortFileList = (fileList: string[]) => {
             // TODO: size, version, time
@@ -505,10 +505,10 @@ There is NO WARRANTY, to the extent permitted by law.
                         continue;
                     }
                 }
-                stats[fileName] = this.lstat(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`)
+                stats[fileName] = this.lstat(join(dir, fileName));
                 if (options.index["-R"] !== -1 && fileName !== "." && fileName !== "..") {
                     if (stats[fileName].mode & StatMode.IFDIR) {
-                        childrenDirectory.push(`${dir}${dir.endsWith("/") ? "" : "/"}${fileName}`);
+                        childrenDirectory.push(join(dir, fileName));
                     }
                 }
                 if (indicatorType.type !== "none") {
@@ -674,7 +674,6 @@ There is NO WARRANTY, to the extent permitted by law.
         } else {
             const list = [];
             for (let i = 0; i < directories.length; i++) {
-                console.log(directories);
                 const directoryPath = directories[i];
                 try {
                     list.push(`${directoryPath}:\n${getFileList(directoryPath, i)}`);
