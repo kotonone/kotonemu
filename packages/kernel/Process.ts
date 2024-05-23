@@ -30,9 +30,6 @@ export interface EmulatorInfo {
 }
 
 export type FileDescriptorData = {
-    /** ディスクリプタ ID */
-    id: number;
-
     /** ファイルへのパス */
     pathname: string;
 
@@ -50,9 +47,6 @@ export interface ProcessInit {
 
     /** プロセス名 */
     name: string;
-
-    /** プロセスのカレントTTY */
-    tty: string;
 
     /** ファイルディスクリプタ */
     fd?: FileDescriptorData[];
@@ -89,9 +83,6 @@ export class Process {
     /** プロセス名 */
     public name: string;
 
-    /** プロセスのカレントTTY */
-    public tty: string;
-
     /** ファイルディスクリプタ */
     public fd: FileDescriptorData[];
 
@@ -112,13 +103,10 @@ export class Process {
     /** プロセスが実行されているグループ ID */
     public gid: number;
 
-    private newFdId: number = 0;
-
     public constructor(emulator: Emulator, process: ProcessInit) {
         this.emulator = emulator;
         this.id = process.id;
         this.name = process.name;
-        this.tty = process.tty;
         this.fd = process.fd ?? [];
         this.children = [];
         this.filesystem = process.filesystem.getSession(this);
@@ -133,7 +121,7 @@ export class Process {
      * @param fd ファイルディスクリプタ ID
      */
     private _requireFileDescriptorData(fd: number): Process["fd"][number] {
-        const fdData = this.fd.find(f => f.id === fd);
+        const fdData = this.fd[fd];
         if (!fdData) throw new EBADFD();
         return fdData;
     }
@@ -142,16 +130,15 @@ export class Process {
      * @param pathname パス名
      * @param flags アクセスモード
      */
-    private _createFileDescriptor(pathname: string, flags: OpenFlag): Process["fd"][number] {
+    private _createFileDescriptor(pathname: string, flags: OpenFlag): number {
         const fdData = {
-            id: this.newFdId,
             pathname,
             offset: 0,
             flags
         };
-        this.fd.push(fdData);
-        this.newFdId++;
-        return fdData;
+        const fdId = Math.max(...Object.keys(this.fd).map(i => parseInt(i))) + 1;
+        this.fd[fdId] = fdData;
+        return fdId;
     }
     /**
      * 指定されたエントリにおいて、指定されたモードの権限が有効になっているか確認します。
@@ -182,7 +169,7 @@ export class Process {
             entry = this.filesystem.get(resolve(pathname, this.env.PWD));
         } catch (e) {
             if (flags & OpenFlag.WRITE && e instanceof ENOENT) {
-                const parentEntry = this.filesystem.get(dirname(pathname));
+                const parentEntry = this.filesystem.get(resolve(dirname(pathname), this.env.PWD));
                 if (!this._isPermitted(parentEntry, 0o2)) throw new EACCES();
 
                 this.filesystem.create(dirname(pathname), <RegularFile>{
@@ -196,7 +183,7 @@ export class Process {
                     data: new ArrayBuffer(0)
                 });
 
-                entry = this.filesystem.get(pathname, true);
+                entry = this.filesystem.get(resolve(pathname, this.env.PWD), true);
             } else {
                 throw e;
             }
@@ -212,7 +199,7 @@ export class Process {
 
         const fd = this._createFileDescriptor(pathname, flags);
         this.filesystem.create(join(this.emulator.PROCESS_DIRECTORY, this.id.toString(), "fd"), <SymbolicLink>{
-            name: fd.id.toString(),
+            name: fd.toString(),
             type: "symlink",
             owner: 0,
             group: 0,
@@ -220,7 +207,7 @@ export class Process {
             deleted: false,
             target: pathname
         });
-        return fd.id;
+        return fd;
     }
 
     /**
@@ -229,7 +216,7 @@ export class Process {
      */
     public close(fd: number): void {
         this.unlink(join(this.emulator.PROCESS_DIRECTORY, this.id.toString(), "fd", fd.toString()));
-        this.fd = this.fd.filter(f => f.id !== fd);
+        delete this.fd[fd];
 
         // TODO: stdio はどうする？
     }
@@ -257,7 +244,7 @@ export class Process {
             throw new EBADFD();
         }
 
-        const entry = this.filesystem.get(fdd.pathname, true);
+        const entry = this.filesystem.get(resolve(fdd.pathname, this.env.PWD), true);
         if (isDirectory(entry)) {
             throw new EISDIR(fdd.pathname);
         }
@@ -286,7 +273,7 @@ export class Process {
             throw new EBADFD();
         }
 
-        const entry = this.filesystem.get(fdd.pathname, true);
+        const entry = this.filesystem.get(resolve(fdd.pathname, this.env.PWD), true);
         if (isDirectory(entry)) {
             throw new EISDIR(fdd.pathname);
         }
@@ -322,7 +309,7 @@ export class Process {
      * @param pathname パス名
      */
     public stat(pathname: string): Stat {
-        return this._stat(this.filesystem.get(pathname, true));
+        return this._stat(this.filesystem.get(resolve(pathname, this.env.PWD), true));
     }
     /**
      * ファイルディスクリプタからファイルの状態を取得します。
@@ -330,7 +317,7 @@ export class Process {
      */
     public fstat(fd: number): Stat {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this.filesystem.get(fdd.pathname);
+        const entry = this.filesystem.get(resolve(fdd.pathname, this.env.PWD));
         return this._stat(entry);
     }
     /**
@@ -338,7 +325,7 @@ export class Process {
      * @param pathname パス名
      */
     public lstat(pathname: string): Stat {
-        return this._stat(this.filesystem.get(pathname));
+        return this._stat(this.filesystem.get(resolve(pathname, this.env.PWD)));
     }
 
     /**
@@ -347,7 +334,7 @@ export class Process {
      * @param flags フラグ
      */
     public unlink(pathname: string, flags: UnlinkFlag = 0 as UnlinkFlag): void {
-        const entry = this.filesystem.get(pathname);
+        const entry = this.filesystem.get(resolve(pathname, this.env.PWD));
         if (flags & UnlinkFlag.REMOVE_DIR) {
             if (!isDirectory(entry)) {
                 throw new ENOTDIR(pathname);
@@ -394,14 +381,14 @@ export class Process {
      * @param pathname パス名
      */
     public readdir(pathname: string): string[] {
-        return this.filesystem.list(pathname);
+        return this.filesystem.list(PATH_SEPARATOR + join(...resolve(pathname, this.env.PWD)));
     }
     /**
      * ディレクトリを削除します。
      * @param pathname パス名
      */
     public rmdir(pathname: string): void {
-        const entry = this.filesystem.get(pathname);
+        const entry = this.filesystem.get(resolve(pathname, this.env.PWD));
         if (!isDirectory(entry)) {
             throw new ENOTDIR(pathname);
         }
@@ -434,7 +421,7 @@ export class Process {
      * @param pathname パス名
      */
     public readlink(pathname: string): string {
-        const entry = this.filesystem.get(pathname);
+        const entry = this.filesystem.get(resolve(pathname, this.env.PWD));
         if (isSymbolicLink(entry)) {
             return entry.target;
         } else {
@@ -464,7 +451,7 @@ export class Process {
      * @param group グループ ID (GID)
      */
     public chown(pathname: string, owner: number, group: number): void {
-        return this._chown(this.filesystem.get(pathname, true), owner, group);
+        return this._chown(this.filesystem.get(resolve(pathname, this.env.PWD), true), owner, group);
     }
     /**
      * ファイルディスクリプタからファイルの所有権を変更します。
@@ -474,7 +461,7 @@ export class Process {
      */
     public fchown(fd: number, owner: number, group: number): void {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this.filesystem.get(fdd.pathname);
+        const entry = this.filesystem.get(resolve(fdd.pathname, this.env.PWD));
         return this._chown(entry, owner, group);
     }
     /**
@@ -484,7 +471,7 @@ export class Process {
      * @param group グループ ID (GID)
      */
     public lchown(pathname: string, owner: number, group: number): void {
-        return this._chown(this.filesystem.get(pathname), owner, group);
+        return this._chown(this.filesystem.get(resolve(pathname, this.env.PWD)), owner, group);
     }
 
     private _chmod(entry: IFile, mode: number): void {
@@ -496,7 +483,7 @@ export class Process {
      * @param mode モード
      */
     public chmod(pathname: string, mode: number): void {
-        return this._chmod(this.filesystem.get(pathname, true), mode);
+        return this._chmod(this.filesystem.get(resolve(pathname, this.env.PWD), true), mode);
     }
     /**
      * ファイルディスクリプタからファイルの権限を変更します。
@@ -505,7 +492,7 @@ export class Process {
      */
     public fchmod(fd: number, mode: number): void {
         const fdd = this._requireFileDescriptorData(fd);
-        const entry = this.filesystem.get(fdd.pathname);
+        const entry = this.filesystem.get(resolve(fdd.pathname, this.env.PWD));
         return this._chmod(entry, mode);
     }
 
@@ -565,8 +552,8 @@ export class Process {
      * @param args 引数
      * @param env 環境変数
      */
-    public async exec(pathname: string, args: string[] = [], env: Partial<ProcessInit["env"]> = {}): Promise<any> {
-        const entry = this.filesystem.get(pathname, true);
+    public async exec(pathname: string, args: string[] = [], env: ProcessInit["env"] = {}): Promise<any> {
+        const entry = this.filesystem.get(resolve(pathname, this.env.PWD), true);
 
         this.name = pathname;
         // TODO: deep copy

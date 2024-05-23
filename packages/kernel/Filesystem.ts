@@ -1,6 +1,6 @@
 import { File, IFile, isDirectory, isFilesystemFile, isSymbolicLink } from "./File";
 import { EEXIST, EINVAL, ENOENT, ENOTDIR, ENOTEMPTY } from "./Error";
-import { PATH_SEPARATOR, dirname, join, resolve } from "./Utils";
+import { PATH_SEPARATOR, basename, dirname, join, resolve } from "./Utils";
 import { Process } from "./Process";
 
 /** ファイルシステムクラス */
@@ -44,12 +44,45 @@ export class FilesystemSession {
     }
 
     /**
-     * パス名が絶対パスであるかどうかを確認します。
-     * @param pathname パス名
+     * 指定されたエントリのファイルシステム・パス・本体を検索します。
+     * @param pathname このファイルシステムにおけるパス名
      */
-    private _validate(pathname: string): void {
-        if (pathname[0] !== PATH_SEPARATOR) throw new EINVAL();
-        if (pathname.length !== 1 && pathname.at(-1) === PATH_SEPARATOR) throw new EINVAL();
+    private _resolve(pathname: string | string[], resolveSymlink: boolean = false): { session: FilesystemSession; pathname: string; entry: File; } {
+        if (typeof pathname === "string") {
+            if (pathname[0] !== PATH_SEPARATOR) throw new EINVAL();
+            if (pathname.length !== 1 && pathname.at(-1) === PATH_SEPARATOR) throw new EINVAL();
+        }
+
+        // NOTE: このセッションのルートを含めたパスを配列にする
+        const pathnameArr = [resolve(this._root), typeof pathname === "string" ? resolve(pathname) : pathname].flat();
+
+        for (let i = 0; i < pathnameArr.length; i++) {
+            const entryId = PATH_SEPARATOR + join(...pathnameArr.slice(0, i + 1));
+
+            if (entryId in this._fs.entries) {
+                const entry = this._fs.entries[entryId];
+
+                if (resolveSymlink && isSymbolicLink(entry)) {
+                    return this._resolve([...resolve(entry.target), ...pathnameArr.slice(i + 1)], resolveSymlink);
+                } else if (isFilesystemFile(entry)) {
+                    return entry.target.getSession(this._process)._resolve(pathnameArr.slice(i + 1), resolveSymlink);
+                } else if (i + 1 === pathnameArr.length) {
+                    return {
+                        session: this,
+                        pathname: entryId,
+                        entry,
+                    };
+                }
+            } else {
+                throw new ENOENT(PATH_SEPARATOR + join(...pathnameArr));
+            }
+        }
+
+        return {
+            session: this,
+            pathname: "/",
+            entry: this._fs.entries["/"]
+        };
     }
 
     /**
@@ -64,46 +97,8 @@ export class FilesystemSession {
      * @param pathname エントリの絶対パス
      * @param [resolveSymlink=false] シンボリックリンクを解決するかどうか
      */
-    public get(pathname: string | string[], resolveSymlink: boolean = false): IFile {
-        const pathnameStr = typeof pathname === "string" ? pathname : PATH_SEPARATOR + join(...pathname);
-        this._validate(pathnameStr);
-
-        if (pathnameStr === PATH_SEPARATOR) return this._fs.entries[PATH_SEPARATOR];
-
-        let pointer: string[] = resolve(this._root);
-        for (const entryName of typeof pathname === "string" ? resolve(pathname) : pathname) {
-            pointer.push(entryName);
-
-            /** 処理中のエントリの内部ID */
-            const entryAbsolutePath = PATH_SEPARATOR + pointer.join(PATH_SEPARATOR);
-            /** まだループ内で処理していないパス */
-            const pathLeft = pathnameStr.slice(entryAbsolutePath.length);
-
-            if (entryAbsolutePath in this._fs.entries) {
-                const entry = this._fs.entries[entryAbsolutePath];
-
-                // NOTE: シンボリックリンクを解決
-                if (resolveSymlink && isSymbolicLink(entry)) return this.get(entry.target + pathLeft);
-
-                // NOTE: ファイルシステムの場合、そのファイルシステムを呼び出し
-                if (isFilesystemFile(entry)) return entry.target.getSession(this._process).get(pathLeft.length === 0 ? PATH_SEPARATOR : pathLeft);
-
-                if (pathLeft.length !== 0) {
-                    if (isDirectory(entry)) {
-                        // NOTE: まだ処理するパスが残っていて、現在参照中のエントリがディレクトリである場合、次へ
-                        continue;
-                    } else {
-                        // NOTE: まだ処理するパスが残っているが、現在参照中のエントリがディレクトリでない場合、ENOTDIR エラーを出力
-                        throw new ENOTDIR(entryAbsolutePath);
-                    }
-                }
-
-                return entry;
-            } else {
-                break;
-            }
-        }
-        throw new ENOENT(pathnameStr);
+    public get(pathname: string | string[], resolveSymlink: boolean = false): File {
+        return this._resolve(pathname, resolveSymlink).entry;
     }
 
     /**
@@ -112,11 +107,16 @@ export class FilesystemSession {
      * @param entry エントリオブジェクト
      */
     public create<E extends File>(pathname: string, entry: E): this {
-        this._validate(pathname);
-        if (!isDirectory(this.get(dirname(pathname)))) throw new ENOTDIR(dirname(pathname));
-        if (pathname in this._fs.entries) throw new EEXIST(pathname);
+        const { session, pathname: p, entry: e } = this._resolve(dirname(pathname), true);
 
-        this._fs.entries[pathname] = entry;
+        if (!isDirectory(e)) throw new ENOTDIR(p);
+        if (p + PATH_SEPARATOR + basename(pathname) in session._fs.entries) throw new EEXIST(pathname);
+
+        if (session === this) {
+            this._fs.entries[pathname] = entry;
+        } else {
+            session.create(p + PATH_SEPARATOR + basename(pathname), entry);
+        }
 
         return this;
     }
@@ -126,14 +126,17 @@ export class FilesystemSession {
      * @param pathname パス名
      */
     public list(pathname: string): string[] {
-        this._validate(pathname);
-        if (!isDirectory(this.get(pathname))) throw new ENOTDIR(pathname);
+        const { session, pathname: p, entry } = this._resolve(pathname);
 
-        const parentPath = pathname + PATH_SEPARATOR;
+        if (!isDirectory(entry)) throw new ENOTDIR(pathname);
 
-        return Object.keys(this._fs.entries)
-            .filter(k => k.startsWith(parentPath))
-            .map(k => k.slice(parentPath.length));
+        if (session === this) {
+            return Object.keys(this._fs.entries)
+                .filter(k => dirname(k) === pathname && k !== pathname)
+                .map(basename);
+        } else {
+            return session.list(p);
+        }
     }
 
     /**
@@ -142,14 +145,22 @@ export class FilesystemSession {
      * @param [recursive=false] エントリがディレクトリの時、再帰的にエントリを削除するかどうか
      */
     public delete(pathname: string, recursive: boolean = false): this {
-        this._validate(pathname);
+        const { session, pathname: p, entry } = this._resolve(pathname);
 
-        delete this._fs.entries[pathname];
-        if (isDirectory(this.get(pathname))) {
-            if (!recursive) throw new ENOTEMPTY(pathname);
-            for (const entryNames of this.list(pathname)) {
-                this.delete(pathname + PATH_SEPARATOR + entryNames);
+        if (!isDirectory(entry)) throw new ENOTDIR(pathname);
+
+        if (session === this) {
+            if (isDirectory(this.get(pathname))) {
+                if (!recursive) throw new ENOTEMPTY(pathname);
+
+                for (const entryNames of this.list(pathname)) {
+                    this.delete(join(pathname, entryNames));
+                }
             }
+
+            delete this._fs.entries[pathname];
+        } else {
+            session.delete(p);
         }
 
         return this;
