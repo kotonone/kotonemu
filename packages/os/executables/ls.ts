@@ -664,6 +664,7 @@ There is NO WARRANTY, to the extent permitted by law.
                 lib.io.write(getFileList(directories[0], 0), 1);
             } catch (e) {
                 if (e instanceof ENOENT) {
+                    // TODO: stat で ENOENT を吐くディレクトリが readdir で取得されると、 stat の ENOENT がこれと競合する
                     lib.io.write(`ls: '${directories[0]}' にアクセスできません: そのようなファイルやディレクトリはありません\n`, 2);
                 } else if (e instanceof ENOTDIR) {
                     lib.io.write(directories[0], 1);
