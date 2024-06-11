@@ -190,7 +190,7 @@ ankosoba`)
                     mode: 0o777
                 })
                 .create("/usr/sbin/init", init(terminal))
-                .filesystem
+                .build()
             ])
     };
 }

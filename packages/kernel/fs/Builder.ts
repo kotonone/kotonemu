@@ -25,4 +25,11 @@ export class PartitionBuilder {
         return this;
     }
 
+    /**
+     * パーティションをビルドします。
+     */
+    public build(): Filesystem {
+        return this.filesystem;
+    }
+
 }
