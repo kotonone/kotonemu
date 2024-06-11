@@ -8,7 +8,7 @@ import mkdir from "./executables/mkdir";
 import login from "./executables/login";
 import init from "./executables/system/init";
 import { Storage } from "@/kernel/Device";
-import { Filesystem, FilesystemBuilder } from "../kernel/Filesystem";
+import { PartitionBuilder } from "../kernel/fs/Builder";
 
 /** ShalfeltOS を生成します。 */
 export default function ShalfeltOS(terminal: Terminal): { options: BootOptions, storage: Storage } {
@@ -29,9 +29,8 @@ export default function ShalfeltOS(terminal: Terminal): { options: BootOptions, 
             }
         },
         storage: new Storage([
-            new FilesystemBuilder()
+            new PartitionBuilder()
                 .create("/dev", {
-                    name: "dev",
                     type: "directory",
                     owner: 0,
                     group: 0,
@@ -177,7 +176,6 @@ ankosoba`)
                     owner: 0,
                     group: 0,
                     mode: 0o777,
-                    deleted: false,
                     target: "/usr/bin/fsh"
                 })
                 .create("/usr/bin/login", login)

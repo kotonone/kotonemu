@@ -1,4 +1,4 @@
-import { Filesystem } from "./Filesystem";
+import { Filesystem } from "./fs/Filesystem";
 import { Process } from "./Process";
 
 export interface IFile {

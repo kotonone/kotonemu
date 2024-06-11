@@ -1,7 +1,7 @@
 import { Emulator } from "./Emulator";
 import { EBADFD, ENOENT, ENOTDIR, EISDIR, EIO, ENOTEMPTY, ELIBBAD, EINVAL, EACCES } from "./Error";
 import { IFile, Directory, isSymbolicLink, isDirectory, RegularFile, SymbolicLink, isRegularFile, isExecutableFile, isDeviceFile, File } from "./File";
-import { Filesystem, FilesystemSession } from "./Filesystem";
+import { Filesystem, FilesystemSession } from "./fs/Filesystem";
 import { OpenFlag, StatMode, StdReadFlag, UnlinkFlag } from "./Flags";
 import { dirname, basename, join, generateFakeElfFile, concatArrayBuffer, PATH_SEPARATOR, resolve } from "./Utils";
 

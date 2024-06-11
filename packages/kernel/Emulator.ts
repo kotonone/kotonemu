@@ -2,7 +2,7 @@ import { join } from "./Utils";
 import { Device, Storage } from "./Device";
 import { EACCES, ENOENT } from "./Error";
 import { Directory, File, IFile } from "./File";
-import { Filesystem, FilesystemSession } from "./Filesystem";
+import { Filesystem, FilesystemSession } from "./fs/Filesystem";
 import { Process } from "./Process";
 
 /*

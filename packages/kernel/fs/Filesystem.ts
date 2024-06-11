@@ -1,7 +1,7 @@
-import { File, IFile, isDirectory, isFilesystemFile, isSymbolicLink } from "./File";
-import { EEXIST, EINVAL, ENOENT, ENOTDIR, ENOTEMPTY } from "./Error";
-import { PATH_SEPARATOR, basename, dirname, join, resolve } from "./Utils";
-import { Process } from "./Process";
+import { File, IFile, isDirectory, isFilesystemFile, isSymbolicLink } from "../File";
+import { EEXIST, EINVAL, ENOENT, ENOTDIR, ENOTEMPTY } from "../Error";
+import { PATH_SEPARATOR, basename, dirname, join, resolve } from "../Utils";
+import { Process } from "../Process";
 
 /** ファイルシステムクラス */
 export class Filesystem {
@@ -59,6 +59,7 @@ export class FilesystemSession {
         for (let i = 0; i < pathnameArr.length; i++) {
             const entryId = PATH_SEPARATOR + join(...pathnameArr.slice(0, i + 1));
 
+            // NOTE: たぶんここに引っかからないせいで procfs は ENOENT で落ちる
             if (entryId in this._fs.entries) {
                 const entry = this._fs.entries[entryId];
 
@@ -106,7 +107,7 @@ export class FilesystemSession {
      * @param pathname 作成するエントリの絶対パス
      * @param entry エントリオブジェクト
      */
-    public create<E extends File>(pathname: string, entry: E): this {
+    public create(pathname: string, entry: File): this {
         const { session, pathname: p, entry: e } = this._resolve(dirname(pathname), true);
 
         if (!isDirectory(e)) throw new ENOTDIR(p);
@@ -163,32 +164,6 @@ export class FilesystemSession {
             session.delete(p);
         }
 
-        return this;
-    }
-
-}
-
-/** ファイルシステムを作成するビルダークラス */
-export class FilesystemBuilder {
-
-    /** ファイルシステム */
-    public filesystem: Filesystem;
-
-    /** ファイルシステムセッション */
-    public session: FilesystemSession;
-
-    public constructor() {
-        this.filesystem = new Filesystem();
-        this.session = this.filesystem.getSession();
-    }
-
-    /**
-     * エントリを作成します。
-     * @param pathname 作成するエントリの絶対パス
-     * @param entry エントリオブジェクト
-     */
-    public create<E extends File>(pathname: string, entry: E): this {
-        this.session.create(pathname, entry);
         return this;
     }
 
