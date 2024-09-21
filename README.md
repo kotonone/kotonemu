@@ -3,6 +3,16 @@
 A Linux Emulator for JavaScript
 </div>
 
+> [!IMPORTANT]
+> Kotonemu is currently undergoing a major rewrite outside of GitHub.
+> 
+> The following features will be added in 0.3.0:
+> * Full WebAssembly (WASI/WASIX) support
+> * Various device support
+>
+> All existing applications will be replaced with WebAssembly. For testing purposes, uutils/coreutils will be used.
+> In addition, the existing ShalfeltOS code will be deprecated. Other disruptive changes to the API are also planned.
+
 ## How to use
 ```ts
 import { Emulator } from "kotonemu";
